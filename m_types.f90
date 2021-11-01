@@ -15,4 +15,9 @@ module m_types
   !> Default length of component names
   integer, parameter :: comp_len = 20
 
+  !> Maximum size of the ODE system
+  integer, parameter :: max_var_lim = 100
+
+  !> Double precision kind
+  integer, parameter :: dp = kind(0.0d0)
 end module m_types

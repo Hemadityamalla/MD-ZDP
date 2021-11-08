@@ -18,7 +18,7 @@ m_lookup_table.o: m_lookup_table.f90
 	$(FC) -c $^
 m_types.o: m_types.f90
 	$(FC) -c $^
-main.o: m_types.o m_config.o m_chemistry.o main.f90 m_transport_data.o
+main.o: m_types.o m_config.o m_chemistry.o main.f90 m_transport_data.o 
 	$(FC) -c $^
 m_units_constants.o: m_units_constants.f90
 	$(FC) -c $^

@@ -11,6 +11,7 @@ program zeroDimPlasmaChem
     integer, parameter :: dt_ix_chem = 1
     integer, parameter :: dt_ix_drt = 2
     real(dp), parameter :: dt_safety_factor = 0.9_dp
+    real(dp) :: time, global_dt
     real(dp) :: dt_max = 1e-11_dp
     real(dp) :: dt_min = 1e-14_dp
     character(len=name_len) :: integrator = "heuns_method"
@@ -26,11 +27,6 @@ program zeroDimPlasmaChem
     real(dp), allocatable :: field_table_fields(:)
     real(dp) :: init_specie_density(2)
 
-
-
-
-    
-    
     print *, "Inside main prog"
     call CFG_update_from_arguments(cfg)
     call init_modules(cfg, odes)
@@ -42,7 +38,13 @@ program zeroDimPlasmaChem
     print *, "Initial densities: ", odes%vars(i_1pos_ion), odes%vars(i_electron)
 
 
+    time = 0.0_dp
+
+    global_dt = minval(dt_array)
+    ! Setting the initial conditions
+    call init_cond_initialize(odes, cfg)
     ! Time integration loop here
+
 
 
 
@@ -72,7 +74,6 @@ program zeroDimPlasmaChem
         call field_initialize(odes, cfg)
         ! Initializing the ode variables
         allocate(odes%vars(odes%n_vars))
-        call init_cond_initialize(odes, cfg)
     
     end subroutine init_modules
 

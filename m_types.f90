@@ -28,4 +28,44 @@ module m_types
     real(dp), allocatable :: vars(:)
   end type ode_sys
 
+  contains
+
+  subroutine add_ode_var(ode_system, name, n_copies, ix)
+    type(ode_sys), intent(inout) :: ode_system
+    character(len=*), intent(in) :: name
+    integer, intent(in), optional :: n_copies
+    integer, intent(out), optional :: ix
+
+    integer :: n, ncpy
+    ncpy = 1; if (present(n_copies)) ncpy = n_copies
+    if (ncpy < 1) error stop "variable copies < 1"
+
+    do n=1, ncpy
+        ode_system%n_vars = ode_system%n_vars + 1
+        if (n==1) then
+            if (present(ix)) ix = ode_system%n_vars
+            ode_system%var_names(ode_system%n_vars) = name
+            ode_system%var_num_copies = ncpy
+        else
+            write(ode_system%var_names(ode_system%n_vars), "(A,I0)") trim(name) // "_", n
+            ode_system%var_num_copies(ode_system%n_vars) = 0
+        end if
+    end do
+  end subroutine add_ode_var
+ 
+  integer function find_ode_var(ode_s, name)
+    type(ode_sys), intent(in) :: ode_s
+    character(len=*), intent(in) :: name
+    integer :: n
+
+    do n=1,ode_s%n_vars
+      if (ode_s%var_names(n) == name) exit
+    end do
+
+    if (n == ode_s%n_vars+1) then
+      print *, "Variable name: ", trim(name)
+      error stop "find_ode_var: variable not found"
+    end if
+  end function find_ode_var
+
 end module m_types

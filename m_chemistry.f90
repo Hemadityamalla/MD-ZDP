@@ -157,13 +157,14 @@ module m_chemistry
 contains
 
   !> Initialize module and load chemical reactions
-  subroutine chemistry_initialize(cfg)
+  subroutine chemistry_initialize(odes, cfg)
     use m_config
     use m_units_constants
     use m_table_data
     use m_transport_data
     use m_gas
     type(CFG_t), intent(inout) :: cfg
+    type(ode_sys), intent(inout) :: odes
     integer                    :: n, i, i_elec
     character(len=string_len)  :: reaction_file
     character(len=comp_len)    :: tmp_name
@@ -258,11 +259,11 @@ contains
     species_itree(1:n_gas_species) = -1
     n_plasma_species = n_species - n_gas_species
 
-    !do n = n_gas_species+1, n_species
-    !   call af_add_cc_variable(tree, trim(species_list(n)), &
-    !        n_copies=af_advance_num_steps(time_integrator), &
-    !        ix=species_itree(n))
-    !end do
+    do n = n_gas_species+1, n_species
+       call add_ode_var(odes, trim(species_list(n)), &
+            n_copies=2, &
+            ix=species_itree(n))
+    end do
 
     ! Store list with only charged species
     n = count(species_charge(1:n_species) /= 0)

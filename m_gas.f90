@@ -38,6 +38,8 @@ module m_gas
 
   ! Index of the gas number density
   integer, public, protected :: i_gas_dens = -1
+  integer, public, protected :: i_gas_pres = -1
+  integer, public, protected :: i_gas_temp = -1
 
   ! Gas mean molecular weight (kg)
   real(dp), public, protected :: gas_molecular_weight = 28.8_dp * UC_atomic_mass
@@ -52,7 +54,7 @@ module m_gas
 contains
 
   !> Initialize this module
-  subroutine gas_initialize(cfg)
+  subroutine gas_initialize(odes, cfg)
     use m_config
     use m_units_constants
     !use m_user_methods
@@ -60,7 +62,12 @@ contains
     use m_table_data
 
     type(CFG_t), intent(inout) :: cfg
+    type(ode_sys), intent(inout) :: odes
     integer :: n
+
+    call add_ode_var(odes, "gas_density", ix=i_gas_dens)
+    call add_ode_var(odes, "gas_pressure", ix=i_gas_pres)
+    call add_ode_var(odes, "gas_temperature", ix=i_gas_temp)
 
 
     call CFG_add_get(cfg, "gas%pressure", gas_pressure, &

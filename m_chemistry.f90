@@ -180,150 +180,150 @@ contains
 
     call read_reactions(trim(reaction_file), read_success)
 
-    !if (.not. read_success) then
-    !   print *, "m_chemistry: no reaction table found, using standard model"
+    if (.not. read_success) then
+       print *, "m_chemistry: no reaction table found, using standard model"
 
-    !   species_list(1) = "e"
-    !   species_list(2) = "M+"
-    !   species_list(3) = "M-"
-    !   n_species       = 3
-    !   n_reactions     = 2
+       species_list(1) = "e"
+       species_list(2) = "M+"
+       species_list(3) = "M-"
+       n_species       = 3
+       n_reactions     = 2
 
-    !   ! Ionization reaction
-    !   if (gas_constant_density) then
-    !      reactions(1)%ix_in = [1]
-    !      reactions(1)%ix_out = [1, 2]
-    !      reactions(1)%multiplicity_out = [2, 1]
-    !      reactions(1)%n_species_in = 2
-    !      reactions(1)%rate_type = rate_tabulated_field
-    !      reactions(1)%rate_factor = 1.0_dp
-    !      reactions(1)%x_data = LT_get_xdata(td_tbl)
-    !      reactions(1)%y_data = td_tbl%rows_cols(:, td_alpha) * &
-    !           td_tbl%rows_cols(:, td_mobility) * reactions(1)%x_data * &
-    !           Townsend_to_SI * gas_number_density
-    !      reactions(1)%description = "e + M > e + e + M+"
+       ! Ionization reaction
+       if (gas_constant_density) then
+          reactions(1)%ix_in = [1]
+          reactions(1)%ix_out = [1, 2]
+          reactions(1)%multiplicity_out = [2, 1]
+          reactions(1)%n_species_in = 2
+          reactions(1)%rate_type = rate_tabulated_field
+          reactions(1)%rate_factor = 1.0_dp
+          reactions(1)%x_data = LT_get_xdata(td_tbl)
+          reactions(1)%y_data = td_tbl%rows_cols(:, td_alpha) * &
+               td_tbl%rows_cols(:, td_mobility) * reactions(1)%x_data * &
+               Townsend_to_SI * gas_number_density
+          reactions(1)%description = "e + M > e + e + M+"
 
-    !      ! Attachment reaction
-    !      reactions(2)%ix_in = [1]
-    !      reactions(2)%ix_out = [3]
-    !      reactions(2)%multiplicity_out = [1]
-    !      reactions(2)%n_species_in = 2
-    !      reactions(2)%rate_type = rate_tabulated_field
-    !      reactions(2)%rate_factor = 1.0_dp
-    !      reactions(2)%x_data = LT_get_xdata(td_tbl)
-    !      reactions(2)%y_data = td_tbl%rows_cols(:, td_eta) * &
-    !           td_tbl%rows_cols(:, td_mobility) * reactions(2)%x_data * &
-    !           Townsend_to_SI * gas_number_density
-    !      reactions(2)%description = "e + M > M-"
-    !   else
-    !      error stop "Varying gas density not yet supported"
-    !   end if
-    !end if
+          ! Attachment reaction
+          reactions(2)%ix_in = [1]
+          reactions(2)%ix_out = [3]
+          reactions(2)%multiplicity_out = [1]
+          reactions(2)%n_species_in = 2
+          reactions(2)%rate_type = rate_tabulated_field
+          reactions(2)%rate_factor = 1.0_dp
+          reactions(2)%x_data = LT_get_xdata(td_tbl)
+          reactions(2)%y_data = td_tbl%rows_cols(:, td_eta) * &
+               td_tbl%rows_cols(:, td_mobility) * reactions(2)%x_data * &
+               Townsend_to_SI * gas_number_density
+          reactions(2)%description = "e + M > M-"
+       else
+          error stop "Varying gas density not yet supported"
+       end if
+    end if
 
-    !! Convert names to simple ascii
-    !do n = 1, n_species
-    !   tmp_name = species_list(n)
-    !   call to_simple_ascii(trim(tmp_name), species_list(n), &
-    !        species_charge(n))
-    !end do
+    ! Convert names to simple ascii
+    do n = 1, n_species
+       tmp_name = species_list(n)
+       call to_simple_ascii(trim(tmp_name), species_list(n), &
+            species_charge(n))
+    end do
 
-    !! Store reactions of the tabulated field type
-    !i = count(reactions(1:n_reactions)%rate_type == rate_tabulated_field)
-    !chemtbl = LT_create(table_min_townsend, table_max_townsend, table_size, i)
+    ! Store reactions of the tabulated field type
+    i = count(reactions(1:n_reactions)%rate_type == rate_tabulated_field)
+    chemtbl = LT_create(table_min_townsend, table_max_townsend, table_size, i)
 
-    !i = 0
-    !do n = 1, n_reactions
-    !   if (reactions(n)%rate_type == rate_tabulated_field) then
-    !      i = i + 1
-    !      reactions(n)%lookup_table_index = i
-    !      if (td_bulk_scale_reactions) then
-    !         call table_set_column(chemtbl, i, reactions(n)%x_data, &
-    !              reactions(n)%y_data * &
-    !              LT_get_col(td_tbl, td_bulk_scaling, reactions(n)%x_data))
-    !      else
-    !         call table_set_column(chemtbl, i, reactions(n)%x_data, &
-    !              reactions(n)%y_data)
-    !      end if
-    !   end if
-    !end do
+    i = 0
+    do n = 1, n_reactions
+       if (reactions(n)%rate_type == rate_tabulated_field) then
+          i = i + 1
+          reactions(n)%lookup_table_index = i
+          if (td_bulk_scale_reactions) then
+             call table_set_column(chemtbl, i, reactions(n)%x_data, &
+                  reactions(n)%y_data * &
+                  LT_get_col(td_tbl, td_bulk_scaling, reactions(n)%x_data))
+          else
+             call table_set_column(chemtbl, i, reactions(n)%x_data, &
+                  reactions(n)%y_data)
+          end if
+       end if
+    end do
 
-    !! Also store in more memory-efficient structure
-    !do n = 1, n_reactions
-    !   tiny_react(n)%ix_in            = reactions(n)%ix_in
-    !   tiny_react(n)%ix_out           = reactions(n)%ix_out
-    !   tiny_react(n)%multiplicity_out = reactions(n)%multiplicity_out
-    !end do
+    ! Also store in more memory-efficient structure
+    do n = 1, n_reactions
+       tiny_react(n)%ix_in            = reactions(n)%ix_in
+       tiny_react(n)%ix_out           = reactions(n)%ix_out
+       tiny_react(n)%multiplicity_out = reactions(n)%multiplicity_out
+    end do
 
-    !! Gas species are not stored in the tree for now
-    !species_itree(1:n_gas_species) = -1
-    !n_plasma_species = n_species - n_gas_species
+    ! Gas species are not stored in the tree for now
+    species_itree(1:n_gas_species) = -1
+    n_plasma_species = n_species - n_gas_species
 
-    !!do n = n_gas_species+1, n_species
-    !!   call af_add_cc_variable(tree, trim(species_list(n)), &
-    !!        n_copies=af_advance_num_steps(time_integrator), &
-    !!        ix=species_itree(n))
-    !!end do
-
-    !! Store list with only charged species
-    !n = count(species_charge(1:n_species) /= 0)
-    !allocate(charged_species_itree(n))
-    !allocate(charged_species_charge(n))
-
-    !i = 0
-    !do n = 1, n_species
-    !   if (species_charge(n) /= 0) then
-    !      i = i + 1
-    !      charged_species_itree(i) = species_itree(n)
-    !      charged_species_charge(i) = species_charge(n)
-    !   end if
-    !end do
-
-    !call check_charge_conservation()
-
-    !! Specify reaction types
-    !i_elec = species_index("e")
-
-    !do n = 1, n_reactions
-    !   if (any(reactions(n)%ix_in == i_elec) .and. &
-    !        .not. any(reactions(n)%ix_out == i_elec) .and. &
-    !        .not. any(species_charge(reactions(n)%ix_in) > 0)) then
-    !      ! In: an electron and no positive ions, out: no electrons
-    !      reactions(n)%reaction_type = attachment_reaction
-    !   else if (any(reactions(n)%ix_in == i_elec) .and. &
-    !        any(reactions(n)%ix_out == i_elec .and. &
-    !        reactions(n)%multiplicity_out == 2)) then
-    !      ! An electron in and out (with multiplicity 2)
-    !      reactions(n)%reaction_type = ionization_reaction
-    !   else if (any(species_charge(reactions(n)%ix_in) /= 0) .and. &
-    !        .not. any(species_charge(reactions(n)%ix_out) /= 0)) then
-    !      ! In: charged species, out: no charged species
-    !      reactions(n)%reaction_type = recombination_reaction
-    !   else if (all(reactions(n)%ix_in /= i_elec) .and. &
-    !        any(reactions(n)%ix_out == i_elec)) then
-    !      ! In: no electrons, out: an electron
-    !      reactions(n)%reaction_type = detachment_reaction
-    !   end if
-    !end do
-
-    !print *, "--- List of reactions ---"
-    !do n = 1, n_reactions
-    !   write(*, "(I4,' (',I0,') ',A15,A)") n, reactions(n)%n_species_in, &
-    !        reaction_names(reactions(n)%reaction_type), &
-    !        reactions(n)%description
-    !end do
-    !print *, "-------------------------"
-    !print *, ""
-    !print *, "--- List of gas species ---"
-    !do n = 1, n_gas_species
-    !   write(*, "(I4,A)") n, ": " // species_list(n)
-    !end do
-    !print *, "-------------------------"
-    !print *, ""
-    !print *, "--- List of plasma species ---"
     !do n = n_gas_species+1, n_species
-    !   write(*, "(I4,A)") n, ": " // species_list(n)
+    !   call af_add_cc_variable(tree, trim(species_list(n)), &
+    !        n_copies=af_advance_num_steps(time_integrator), &
+    !        ix=species_itree(n))
     !end do
-    !print *, "-------------------------"
+
+    ! Store list with only charged species
+    n = count(species_charge(1:n_species) /= 0)
+    allocate(charged_species_itree(n))
+    allocate(charged_species_charge(n))
+
+    i = 0
+    do n = 1, n_species
+       if (species_charge(n) /= 0) then
+          i = i + 1
+          charged_species_itree(i) = species_itree(n)
+          charged_species_charge(i) = species_charge(n)
+       end if
+    end do
+
+    call check_charge_conservation()
+
+    ! Specify reaction types
+    i_elec = species_index("e")
+
+    do n = 1, n_reactions
+       if (any(reactions(n)%ix_in == i_elec) .and. &
+            .not. any(reactions(n)%ix_out == i_elec) .and. &
+            .not. any(species_charge(reactions(n)%ix_in) > 0)) then
+          ! In: an electron and no positive ions, out: no electrons
+          reactions(n)%reaction_type = attachment_reaction
+       else if (any(reactions(n)%ix_in == i_elec) .and. &
+            any(reactions(n)%ix_out == i_elec .and. &
+            reactions(n)%multiplicity_out == 2)) then
+          ! An electron in and out (with multiplicity 2)
+          reactions(n)%reaction_type = ionization_reaction
+       else if (any(species_charge(reactions(n)%ix_in) /= 0) .and. &
+            .not. any(species_charge(reactions(n)%ix_out) /= 0)) then
+          ! In: charged species, out: no charged species
+          reactions(n)%reaction_type = recombination_reaction
+       else if (all(reactions(n)%ix_in /= i_elec) .and. &
+            any(reactions(n)%ix_out == i_elec)) then
+          ! In: no electrons, out: an electron
+          reactions(n)%reaction_type = detachment_reaction
+       end if
+    end do
+
+    print *, "--- List of reactions ---"
+    do n = 1, n_reactions
+       write(*, "(I4,' (',I0,') ',A15,A)") n, reactions(n)%n_species_in, &
+            reaction_names(reactions(n)%reaction_type), &
+            reactions(n)%description
+    end do
+    print *, "-------------------------"
+    print *, ""
+    print *, "--- List of gas species ---"
+    do n = 1, n_gas_species
+       write(*, "(I4,A)") n, ": " // species_list(n)
+    end do
+    print *, "-------------------------"
+    print *, ""
+    print *, "--- List of plasma species ---"
+    do n = n_gas_species+1, n_species
+       write(*, "(I4,A)") n, ": " // species_list(n)
+    end do
+    print *, "-------------------------"
 
   end subroutine chemistry_initialize
 

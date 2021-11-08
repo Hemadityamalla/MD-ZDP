@@ -144,7 +144,7 @@ contains
     character(len=4)              :: extension
 
     strict = .true.; if (present(ignore_unknown)) strict = .not. ignore_unknown
-
+    print *, "BLAAAH"
     do ix = 1, command_argument_count()
        call get_command_argument(ix, arg)
 

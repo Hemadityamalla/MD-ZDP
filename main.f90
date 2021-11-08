@@ -15,6 +15,7 @@ program zeroDimPlasmaChem
 
     
     
+    print *, "Inside main prog"
     call CFG_update_from_arguments(cfg)
     call init_modules(cfg)
 
@@ -23,6 +24,7 @@ program zeroDimPlasmaChem
     subroutine init_modules(cfg)
         use m_table_data
         use m_transport_data
+        use m_gas
         implicit none
         type(CFG_t),intent(inout) :: cfg
         !Initialize the time steps here
@@ -30,6 +32,7 @@ program zeroDimPlasmaChem
         !Initialize the tables used for some reaction rates
         call table_data_initialize(cfg)
         call transport_data_initialize(cfg)
+        call gas_initialize(cfg)
         !Read the input reactions
         call chemistry_initialize(cfg)
     

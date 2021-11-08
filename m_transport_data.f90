@@ -184,6 +184,8 @@ contains
 
     call CFG_add_get(cfg, "input_data%ion_se_yield", ion_se_yield, &
          "Secondary electron emission yield for positive ions")
+     
+     print *, "Transport data done success"
 
   end subroutine transport_data_initialize
 

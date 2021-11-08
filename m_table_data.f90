@@ -56,6 +56,7 @@ contains
     case default
        error stop "invalid input_interpolation method"
     end select
+    print *, "Table data done success"
 
   end subroutine table_data_initialize
 

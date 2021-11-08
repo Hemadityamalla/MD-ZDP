@@ -1,5 +1,5 @@
 FC := gfortran
-FFLAGS := -O0 -Wall  -fcheck=all -pg -ffpe-trap=invalid,zero,overflow -pedantic -finit-real=snan
+FFLAGS := -O0 -Wall  -fcheck=array-temps,bounds,do,mem,pointer -pg -ffpe-trap=invalid,zero,overflow -pedantic -finit-real=snan
 LDFLAGS := 
 TARGET := zdPlasmaChem
 OBJ := m_chemistry.o m_config.o m_gas.o m_lookup_table.o m_spline_interp.o m_table_data.o m_transport_data.o m_types.o m_units_constants.o main.o
@@ -7,7 +7,7 @@ OBJ := m_chemistry.o m_config.o m_gas.o m_lookup_table.o m_spline_interp.o m_tab
 all: $(TARGET)
 
 $(TARGET): $(OBJ)
-	$(FC) $(FFLAGS) -o $@ $^ $(LDFLAGS)
+	$(FC) $(FFLAGS) -o $@ $^ $(LDFLAGS) -D NDIM=0
 
 
 m_config.o: m_config.f90
@@ -38,4 +38,4 @@ m_chemistry.o: m_chemistry.f90 m_types.o m_lookup_table.o m_table_data.o m_units
 .PHONY: clean
 
 clean:
-	rm -f $(OBJ) *.mod $(TARGET) *.o
+	rm -f $(OBJ) *.mod $(TARGET) *.o gmon.out

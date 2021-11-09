@@ -26,6 +26,7 @@ module m_types
     character(len=name_len) :: var_names(max_var_lim)
     integer :: var_num_copies(max_var_lim) = 1
     real(dp), allocatable :: vars(:)
+    real(dp), allocatable :: vars_rhs(:)
   end type ode_sys
 
   contains
@@ -45,7 +46,7 @@ module m_types
         if (n==1) then
             if (present(ix)) ix = ode_system%n_vars
             ode_system%var_names(ode_system%n_vars) = name
-            ode_system%var_num_copies = ncpy
+            ode_system%var_num_copies(ode_system%n_vars) = ncpy
         else
             write(ode_system%var_names(ode_system%n_vars), "(A,I0)") trim(name) // "_", n
             ode_system%var_num_copies(ode_system%n_vars) = 0

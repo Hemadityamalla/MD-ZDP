@@ -179,6 +179,11 @@ contains
     !   species_list(1:n_gas_species) = gas_components
     !end if
 
+    ! Make sure the gas components are the first species
+    n_gas_species                 = size(gas_components)
+    n_species                     = n_gas_species
+    species_list(1:n_gas_species) = gas_components
+
     call read_reactions(trim(reaction_file), read_success)
 
     if (.not. read_success) then

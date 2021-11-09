@@ -6,17 +6,23 @@ program zeroDimPlasmaChem
 
     type(CFG_t) :: cfg 
     type(ode_sys) :: odes
+    integer, parameter :: n_cell = 1
     integer, parameter :: dt_num_cond = 2
     real(dp) :: dt_array(2)
     integer, parameter :: dt_ix_chem = 1
     integer, parameter :: dt_ix_drt = 2
     real(dp), parameter :: dt_safety_factor = 0.9_dp
     real(dp) :: time, global_dt
+    real(dp) :: end_time
     real(dp) :: dt_max = 1e-11_dp
     real(dp) :: dt_min = 1e-14_dp
     character(len=name_len) :: integrator = "heuns_method"
     integer :: time_integrator = -1
-    integer, parameter :: integration_advance_steps(3) = [1,2,2]
+    integer, parameter :: n_integrators = 3
+    integer, parameter :: fwd_euler = 1
+    integer, parameter :: rk2 = 2
+    integer, parameter :: heuns = 3
+    integer, parameter :: integration_advance_steps(n_integrators) = [1,2,2]
     integer :: i_electron = -1
     integer :: i_1pos_ion = -1
     integer :: ix_electron = -1
@@ -35,7 +41,11 @@ program zeroDimPlasmaChem
     print *, "ODE system stuff: ", odes%var_names(1:odes%n_vars) !Debug linr
     print *, "Initial field value: ", field_amplitude
     print *, "First positive ion: ", odes%var_names(i_1pos_ion)
-    print *, "Initial densities: ", odes%vars(i_1pos_ion), odes%vars(i_electron)
+    print *, "N_gas_species: ", n_gas_species
+    print *, "N_species: ", n_species
+    print *, "species_itree: ", species_itree(n_gas_species+1:n_species)
+    print *, "Index of electric field: :", find_ode_var(odes, "electric_fld"), i_electron
+    ! End debug lines
 
 
     time = 0.0_dp
@@ -43,10 +53,22 @@ program zeroDimPlasmaChem
     global_dt = minval(dt_array)
     ! Setting the initial conditions
     call init_cond_initialize(odes, cfg)
+    print *, "Initial densities: ", odes%vars(i_1pos_ion), odes%vars(i_electron)
     ! Time integration loop here
+    do while (time < end_time)
+      ! Add functionality to compute the wall clock time 
+
+      print *, "Time: ", time
+      call ode_advance(odes, global_dt, &
+         species_itree(n_gas_species+1:n_species), time_integrator)
+
+      print *, "Electron density: ", odes%vars(i_electron)
+      time = time + global_dt
 
 
 
+    end do
+    
 
     print *, "End of simulation"
 
@@ -74,6 +96,8 @@ program zeroDimPlasmaChem
         call field_initialize(odes, cfg)
         ! Initializing the ode variables
         allocate(odes%vars(odes%n_vars))
+        ! Initializing the ode variables rhs -- for the rates
+        allocate(odes%vars_rhs(odes%n_vars))
     
     end subroutine init_modules
 
@@ -85,6 +109,8 @@ program zeroDimPlasmaChem
          "The maximum timestep (s)")
         call CFG_add_get(cfg, "dt_min", dt_min, &
          "The minimum timestep (s)")
+        call CFG_add_get(cfg, "end_time", end_time, &
+         "The end time for the simulation (s)")
         !call CFG_add_get(cfg, "dt_safety_factor", dt_safety_factor, &
          !"Safety factor for the time step")
         call CFG_add_get(cfg, "time_integrator", integrator, &
@@ -120,6 +146,7 @@ program zeroDimPlasmaChem
 
       ! Set electron index
       i_electron = find_ode_var(odes, "e")
+      print *, "i_electron", i_electron
       ix_electron = species_index("e")
       do n = n_gas_species+1, n_species
          if (species_charge(n) == 1) then
@@ -174,6 +201,78 @@ program zeroDimPlasmaChem
       odes%vars(i_1pos_ion), "Initial first positive ion density")
     
     end subroutine init_cond_initialize
+
+    subroutine compute_rhs(ode_s, specie_idx)
+      use m_gas
+      use m_chemistry
+      use m_transport_data
+      use m_lookup_table
+      use m_units_constants
+      implicit none
+      type(ode_sys),intent(inout) :: ode_s
+      integer, intent(in) :: specie_idx(:)
+      real(dp)                   :: rates(n_cell,n_reactions)
+      real(dp)                   :: derivs(n_cell,n_species)
+      real(dp)                   :: dens(n_cell,n_species)
+      real(dp)                   :: field(n_cell), tmp
+      real(dp), parameter :: eps = 1e-100_dp
+
+      !Obtain the field (E/N) in Townsend units
+      if (gas_constant_density) then
+         tmp = 1 / gas_number_density
+         field(n_cell) = SI_to_Townsend * tmp * field_amplitude
+      end if
+
+      ! Get the specie densities for a given time step or intermediate time step
+      dens(n_cell,n_gas_species+1:n_species) = ode_s%vars(specie_idx)
+
+      call get_rates(field, rates, n_cell)
+
+      call get_derivatives(dens, rates, derivs, n_cell)
+
+      ode_s%vars_rhs(specie_idx) = derivs(1,:)
+
+    
+    end subroutine compute_rhs
+
+    subroutine ode_advance(ode_s,  dt, var_idx, integrator_type)
+      implicit none
+      type(ode_sys),intent(inout) :: ode_s
+      integer, intent(in) :: var_idx(:), integrator_type
+      real(dp), intent(in) :: dt
+   
+      if (integrator_type < 1 .or. integrator_type > n_integrators) &
+         error stop "Invalid time integrator"
+      
+      if (any(ode_s%var_num_copies(var_idx) < &
+         integration_advance_steps(integrator_type))) &
+         error stop "Not enough copies available"
+   
+      select case (integrator_type)
+      case(fwd_euler)
+         call compute_rhs(ode_s, var_idx)
+         ode_s%vars(var_idx) = ode_s%vars(var_idx) + dt*ode_s%vars_rhs(var_idx)
+         
+      case(rk2)
+         call compute_rhs(ode_s, var_idx)
+         ode_s%vars(var_idx+1) = ode_s%vars(var_idx) + &
+            0.5_dp*dt*ode_s%vars_rhs(var_idx)
+         call compute_rhs(ode_s, var_idx+1)
+         ode_s%vars(var_idx) = ode_s%vars(var_idx) + &
+            dt*ode_s%vars_rhs(var_idx+1)
+
+      case(heuns)
+         call compute_rhs(ode_s, var_idx)
+         ode_s%vars(var_idx+1) = ode_s%vars(var_idx) + &
+            dt*ode_s%vars_rhs(var_idx)
+         call compute_rhs(ode_s, var_idx+1)
+         ode_s%vars(var_idx) = ode_s%vars(var_idx) + &
+            0.5_dp*dt*(ode_s%vars_rhs(var_idx) + ode_s%vars_rhs(var_idx+1))
+
+      end select
+    
+    
+    end subroutine ode_advance
 
     !Write a subroutine that outputs the simulation data as a .txt file
 end program zeroDimPlasmaChem

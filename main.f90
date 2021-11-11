@@ -37,14 +37,15 @@ program zeroDimPlasmaChem
     call CFG_update_from_arguments(cfg)
     call init_modules(cfg, odes)
     print *, "Integration method to be used ", integrator !Debug line
-    print *, "ODE system stuff: ", odes%n_vars !Debug linr
-    print *, "ODE system stuff: ", odes%var_names(1:odes%n_vars) !Debug linr
+    print *, "ODE system number of variables: ", odes%n_vars !Debug linr
+    print *, "ODE system variable names: ", odes%var_names(1:odes%n_vars) !Debug linr
     print *, "Initial field value: ", field_amplitude
     print *, "First positive ion: ", odes%var_names(i_1pos_ion)
     print *, "N_gas_species: ", n_gas_species
     print *, "N_species: ", n_species
+    print *, "Species list: ", species_list(n_gas_species+1:n_species)
     print *, "species_itree: ", species_itree(n_gas_species+1:n_species)
-    print *, "Index of electric field: :", find_ode_var(odes, "electric_fld"), i_electron
+    print *, "Index of electric field, electron: ", find_ode_var(odes, "electric_fld"), find_ode_var(odes, "e")
     ! End debug lines
 
 
@@ -58,11 +59,11 @@ program zeroDimPlasmaChem
     do while (time < end_time)
       ! Add functionality to compute the wall clock time 
 
-      print *, "Time: ", time
+      !print *, "Time: ", time
       call ode_advance(odes, global_dt, &
          species_itree(n_gas_species+1:n_species), time_integrator)
 
-      print *, "Electron density: ", odes%vars(i_electron)
+      !print *, "Electron density: ", odes%vars(i_electron)
       time = time + global_dt
 
 

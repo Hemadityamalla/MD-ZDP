@@ -67,6 +67,7 @@ module m_types
       print *, "Variable name: ", trim(name)
       error stop "find_ode_var: variable not found"
     end if
+    find_ode_var = n
   end function find_ode_var
 
 end module m_types

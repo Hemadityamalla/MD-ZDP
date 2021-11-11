@@ -8,3 +8,10 @@
 
 - `make`
 - `./zdPlasmaChem streamer_2d.cfg`
+
+
+### Future work
+- Write a CMakeLists.txt for this project.
+- Add the functionality to use dvode modules for the time integration.
+- Option to output the rate constants as a matrix
+- Option to output the rates/rate constants as a function of some parameters.

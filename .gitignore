@@ -1,6 +1,5 @@
 
 *.o
-*.txt
 gmon.out
 *.mod
 .vscode

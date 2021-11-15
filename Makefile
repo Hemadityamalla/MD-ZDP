@@ -1,5 +1,5 @@
 FC := gfortran
-FFLAGS := -O0 -Wall  -fcheck=array-temps,bounds,do,mem,pointer -pg -ffpe-trap=invalid,zero,overflow -pedantic -finit-real=snan
+FFLAGS := -O3 -Wall  -fcheck=array-temps,bounds,do,mem,pointer -pg -ffpe-trap=invalid,zero,overflow -pedantic -finit-real=snan -fbounds-check
 LDFLAGS := 
 TARGET := zdPlasmaChem
 OBJ := m_chemistry.o m_config.o m_gas.o m_lookup_table.o m_spline_interp.o m_table_data.o m_transport_data.o m_types.o m_units_constants.o main.o

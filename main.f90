@@ -59,11 +59,12 @@ program zeroDimPlasmaChem
     do while (time < end_time)
       ! Add functionality to compute the wall clock time 
 
-      !print *, "Time: ", time
+      print *, "Time: ", time
+      call output_solution(odes, "dumb_output.txt", time, i_electron)
       call ode_advance(odes, global_dt, &
          species_itree(n_gas_species+1:n_species), time_integrator)
 
-      !print *, "Electron density: ", odes%vars(i_electron)
+      print *, "Electron density: ", odes%vars(i_electron)
       time = time + global_dt
 
 
@@ -213,11 +214,14 @@ program zeroDimPlasmaChem
       type(ode_sys),intent(inout) :: ode_s
       integer, intent(in) :: specie_idx(:)
       real(dp)                   :: rates(n_cell,n_reactions)
-      real(dp)                   :: derivs(n_cell,n_species)
+      real(dp)                   :: derivs(n_cell,1:n_species)
       real(dp)                   :: dens(n_cell,n_species)
       real(dp)                   :: field(n_cell), tmp
       real(dp), parameter :: eps = 1e-100_dp
 
+      !print *, "Checking sizes: ", n_species, size(ode_s%vars(specie_idx))
+      !print *, "Species list: ", species_list(:)
+      !print *, "Specie idx:", specie_idx
       !Obtain the field (E/N) in Townsend units
       if (gas_constant_density) then
          tmp = 1 / gas_number_density
@@ -228,10 +232,13 @@ program zeroDimPlasmaChem
       dens(n_cell,n_gas_species+1:n_species) = ode_s%vars(specie_idx)
 
       call get_rates(field, rates, n_cell)
+      !print *, "Rates: ", rates
 
       call get_derivatives(dens, rates, derivs, n_cell)
+      !print *, "Derivatives: ", derivs
+      !print *, "Derivatives specie idx: ", derivs(1, specie_idx)
 
-      ode_s%vars_rhs(specie_idx) = derivs(1,:)
+      ode_s%vars_rhs(specie_idx) = derivs(1,n_gas_species+1:n_species)
 
     
     end subroutine compute_rhs
@@ -251,7 +258,10 @@ program zeroDimPlasmaChem
    
       select case (integrator_type)
       case(fwd_euler)
+         print *, "Inside ode_advance, fwd_euler, var_idx: ", var_idx
+         print *, "Print ode_rhs using var_idx", ode_s%vars_rhs(var_idx)
          call compute_rhs(ode_s, var_idx)
+         print *, "Print ode_rhs using var_idx after update", ode_s%vars_rhs(var_idx)
          ode_s%vars(var_idx) = ode_s%vars(var_idx) + dt*ode_s%vars_rhs(var_idx)
          
       case(rk2)
@@ -275,6 +285,39 @@ program zeroDimPlasmaChem
     
     end subroutine ode_advance
 
-    !Write a subroutine that outputs the simulation data as a .txt file
+    !Subroutine that outputs the simulation data as a .txt file
+    subroutine output_solution(odes_s, filename, t, idx)
+      use m_chemistry
+      use m_types
+      implicit none
+      type(ode_sys), intent(in) :: odes_s
+      character(len=*), intent(in) :: filename
+      character(len=50), save :: fmt
+      integer :: my_unit, n, i
+      integer, intent(in) :: idx
+      real(dp), intent(in) :: t
+      logical, save :: first_time = .true.
+
+      if (first_time) then
+         first_time = .false.
+         
+         open(newunit=my_unit, file=trim(filename), action="write")
+         write(my_unit, "(A)", advance="no") "time electron_density"
+
+
+         write(my_unit, *) ""
+         close(my_unit)
+
+      end if
+
+      !write(fmt, "A, I0, A"), 
+      fmt = "(E16.8, E16.8)"
+      open(newunit=my_unit, file=trim(filename), action="write", &
+         position="append")
+
+      write(my_unit, fmt) t, odes_s%vars(idx)
+      close(my_unit)
+    end subroutine output_solution
+    
 end program zeroDimPlasmaChem
 

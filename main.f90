@@ -292,21 +292,29 @@ program zeroDimPlasmaChem
       implicit none
       type(ode_sys), intent(in) :: odes_s
       character(len=*), intent(in) :: filename
-      character(len=50), save :: fmt
-      integer :: my_unit, n, i
+      character(len=50), save :: fmt, fmt_header
+      character(len=50) :: test_fmt
+      integer :: my_unit, n, i, n_vars
       integer, intent(in) :: idx
       real(dp), intent(in) :: t
       logical, save :: first_time = .true.
 
+      n_vars = odes_s%n_vars
+     ! write(fmt_header, "(A)"), "(A,", comp_len*n_vars,"A)"
       if (first_time) then
          first_time = .false.
          
+         !write(fmt_header, "(A)"), "(A,", comp_len*n_vars,"A)"
          open(newunit=my_unit, file=trim(filename), action="write")
-         write(my_unit, "(A)", advance="no") "time electron_density"
+         write(my_unit, "(A)", advance="no") "time ", &
+            odes_s%var_names(1:odes_s%n_vars)
 
 
          write(my_unit, *) ""
          close(my_unit)
+
+        write(test_fmt, "(A,I0,A)"), "(I6,", 32, "E16.8,I12,1E16.8,I3)"
+        print *, "PRINT TEST FORMAT", test_fmt
 
       end if
 

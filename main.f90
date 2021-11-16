@@ -32,10 +32,13 @@ program zeroDimPlasmaChem
     real(dp), allocatable :: field_table_times(:)
     real(dp), allocatable :: field_table_fields(:)
     real(dp) :: init_specie_density(2)
+    character(len=string_len) :: output_name
 
     print *, "Inside main prog"
     call CFG_update_from_arguments(cfg)
     call init_modules(cfg, odes)
+    call CFG_add_get(cfg, "output%name", output_name, &
+      "Name of the output file")
     print *, "Integration method to be used ", integrator !Debug line
     print *, "ODE system number of variables: ", odes%n_vars !Debug linr
     print *, "ODE system variable names: ", odes%var_names(1:odes%n_vars) !Debug linr
@@ -60,7 +63,7 @@ program zeroDimPlasmaChem
       ! Add functionality to compute the wall clock time 
 
       print *, "Time: ", time
-      call output_solution(odes, "dumb_output.txt", time, i_electron)
+      call output_solution(odes, trim(output_name), time, i_electron)
       call ode_advance(odes, global_dt, &
          species_itree(n_gas_species+1:n_species), time_integrator)
 
@@ -300,21 +303,18 @@ program zeroDimPlasmaChem
       logical, save :: first_time = .true.
 
       n_vars = odes_s%n_vars
-     ! write(fmt_header, "(A)"), "(A,", comp_len*n_vars,"A)"
       if (first_time) then
          first_time = .false.
          
-         !write(fmt_header, "(A)"), "(A,", comp_len*n_vars,"A)"
          open(newunit=my_unit, file=trim(filename), action="write")
-         write(my_unit, "(A)", advance="no") "time ", &
-            odes_s%var_names(1:odes_s%n_vars)
+         write(my_unit, "(A)", advance="no") "time electron_density"
 
 
          write(my_unit, *) ""
          close(my_unit)
 
-        write(test_fmt, "(A,I0,A)"), "(I6,", 32, "E16.8,I12,1E16.8,I3)"
-        print *, "PRINT TEST FORMAT", test_fmt
+        !write(test_fmt, "(A,I0,A)"), "(I6,", 32, "E16.8,I12,1E16.8,I3)"
+        !print *, "PRINT TEST FORMAT", test_fmt
 
       end if
 

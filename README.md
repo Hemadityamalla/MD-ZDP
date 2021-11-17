@@ -15,3 +15,6 @@
 - Add the functionality to use dvode modules for the time integration.
 - Option to output the rate constants as a matrix
 - Option to output the rates/rate constants as a function of some parameters.
+- FULLY DOCUMENT HOW THE HDF5 STUFF WAS INSTALLED AND THE PROBLEMS
+### Installing HDF5 for writing the output
+- I used HDF5 to write the data. For that, I used the following tutorial: https://www.youtube.com/watch?v=ysqvDunaXNA . It also has instructions on how to install the HDF5 libraries in your system

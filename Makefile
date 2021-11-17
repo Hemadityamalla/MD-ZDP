@@ -4,10 +4,14 @@ LDFLAGS :=
 TARGET := zdPlasmaChem
 OBJ := m_chemistry.o m_config.o m_gas.o m_lookup_table.o m_spline_interp.o m_table_data.o m_transport_data.o m_types.o m_units_constants.o main.o
 
+HDF5_LIB=/home/hemaditya/hdf5_config_fortran_build/fortran/src
+HDF5_INC=/home/hemaditya/hdf5_config_fortran_build/fortran/src
+HDF5_FLAGS=-lhdf5 -lhdf5_fortran
+
 all: $(TARGET)
 
 $(TARGET): $(OBJ)
-	$(FC) $(FFLAGS) -o $@ $^ $(LDFLAGS) -D NDIM=0
+	$(FC) $(FFLAGS) -L$(HDF5_LIB) -o $@ $^ $(LDFLAGS) -D NDIM=0 $(HDF5_FLAGS)
 
 
 m_config.o: m_config.f90
@@ -19,7 +23,7 @@ m_lookup_table.o: m_lookup_table.f90
 m_types.o: m_types.f90
 	$(FC) -c $^
 main.o: m_types.o m_config.o m_chemistry.o main.f90 m_transport_data.o 
-	$(FC) -c $^
+	$(FC) -c $^ -I$(HDF5_INC)
 m_units_constants.o: m_units_constants.f90
 	$(FC) -c $^
 m_gas.o: m_gas.f90 m_types.o m_units_constants.o m_config.o m_table_data.o

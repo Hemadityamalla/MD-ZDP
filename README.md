@@ -9,6 +9,18 @@
 - `make`
 - `./zdPlasmaChem streamer_2d.cfg`
 
+#### Immediate TODOs
+- Solve the M and X/Ar neutral gas variable duplications.
+- Functionality to add initial specie density-- e, pos, negative, (anything else?)
+- Check and remove the transport data module
+- Make the constant/variable gas density consistent throughtout the code.
+- Add example with a repetitive pulse 
+
+#### Not-so immediate TODOs
+- Add options to write out source/sink terms for the species
+- Output rate constants, etc
+- ADD UNIT AND REGRESSION TESTS
+
 
 ### Future work
 - Write a CMakeLists.txt for this project.

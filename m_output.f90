@@ -31,7 +31,7 @@ contains
      character(len=*), intent(in) :: filename
      character(len=50), save :: fmt, fmt_header
      character(len=50) :: test_fmt
-     integer :: my_unit, n, i, n_vars, error, space_rank
+     integer :: my_unit, n, i, n_vars, error, space_rank, dvar_i
      integer, intent(in) :: idx
      real(dp), intent(in) :: t
      logical, save :: first_time = .true.
@@ -56,11 +56,24 @@ contains
         data_dims(1) = max_rows
 
         call h5screate_simple_f(space_rank, data_dims, dspace_id, error)
-        do i=1,n_vars
-               call h5dcreate_f(file_id, trim(odes_s%var_names(i)), H5T_NATIVE_DOUBLE, dspace_id, dset_id(i), error)
-               call h5dclose_f(dset_id(i), error)
+        dvar_i = 1
+        ! Writing the gas properties and the electric field
+        do i=1,4
+               call h5dcreate_f(file_id, trim(odes_s%var_names(i)), &
+                     H5T_NATIVE_DOUBLE, dspace_id, dset_id(dvar_i), error)
+               call h5dclose_f(dset_id(dvar_i), error)
+               dvar_i = dvar_i + 1
 
         end do
+        ! Writing the specie densities
+        do i= 1, n_species - n_gas_species
+               call h5dcreate_f(file_id, & 
+                    trim(odes_s%var_names(species_itree(n_gas_species+i))), &
+                     H5T_NATIVE_DOUBLE, dspace_id, dset_id(dvar_i), error)
+               call h5dclose_f(dset_id(dvar_i), error)
+               dvar_i = dvar_i + 1
+        end do
+
 
         
 

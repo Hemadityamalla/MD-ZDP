@@ -62,12 +62,12 @@ program zeroDimPlasmaChem
     do while (time < end_time)
       ! Add functionality to compute the wall clock time 
 
-      print *, "Time: ", time
+      !print *, "Time: ", time
       call output_HDF5_solution(odes, trim(output_name), time, i_electron)
       call ode_advance(odes, global_dt, &
          species_itree(n_gas_species+1:n_species), time_integrator)
 
-      print *, "Electron density: ", odes%vars(i_electron)
+      !print *, "Electron density: ", odes%vars(i_electron)
       time = time + global_dt
 
 
@@ -93,13 +93,13 @@ program zeroDimPlasmaChem
         call table_data_initialize(cfg)
         call transport_data_initialize(cfg)
         call gas_initialize(odes, cfg)
+        call field_initialize(odes, cfg)
         !Read the input reactions
         call chemistry_initialize(odes, cfg)
         !Initialize dt values and the type of time integrator to be used
         call dt_initialize(cfg)
 
         call cfg_init(odes, cfg)
-        call field_initialize(odes, cfg)
         ! Initializing the ode variables
         allocate(odes%vars(odes%n_vars))
         ! Initializing the ode variables rhs -- for the rates
@@ -154,7 +154,7 @@ program zeroDimPlasmaChem
 
       ! Set electron index
       i_electron = find_ode_var(odes, "e")
-      print *, "i_electron", i_electron
+      !print *, "i_electron", i_electron
       ix_electron = species_index("e")
       do n = n_gas_species+1, n_species
          if (species_charge(n) == 1) then
@@ -168,7 +168,6 @@ program zeroDimPlasmaChem
   
 
       !Used to initialize MANY other input conditions/etc. Afivo has stuff like Bcs, ion motion stuff, etc, which we dont have
-      call add_ode_var(odes, "electric_fld", ix=i_e_fld)
 
 
     
@@ -182,6 +181,7 @@ program zeroDimPlasmaChem
       type(CFG_t),intent(inout) ::  cfg
       character(len=string_len) :: field_table
 
+      call add_ode_var(odes, "electric_fld", ix=i_e_fld)
       field_table = undefined_str
       call CFG_add_get(cfg, "field_table", field_table, "File containing applied electric field (V/m) versus time")
       if (field_table /= undefined_str) then

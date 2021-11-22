@@ -2,6 +2,7 @@ program zeroDimPlasmaChem
     use m_config
     use m_chemistry
     use m_types
+    use m_output
     implicit none
 
     type(CFG_t) :: cfg 
@@ -32,13 +33,12 @@ program zeroDimPlasmaChem
     real(dp), allocatable :: field_table_times(:)
     real(dp), allocatable :: field_table_fields(:)
     real(dp) :: init_specie_density(2)
-    character(len=string_len) :: output_name
+    !character(len=string_len) :: output_name
 
     print *, "Inside main prog"
     call CFG_update_from_arguments(cfg)
     call init_modules(cfg, odes)
-    call CFG_add_get(cfg, "output%name", output_name, &
-      "Name of the output file")
+    
     print *, "Integration method to be used ", integrator !Debug line
     print *, "ODE system number of variables: ", odes%n_vars !Debug linr
     print *, "ODE system variable names: ", odes%var_names(1:odes%n_vars) !Debug linr
@@ -83,6 +83,7 @@ program zeroDimPlasmaChem
         use m_table_data
         use m_transport_data
         use m_gas
+        use m_output
         implicit none
         type(CFG_t),intent(inout) :: cfg
         type(ode_sys),intent(inout) :: odes
@@ -103,6 +104,8 @@ program zeroDimPlasmaChem
         allocate(odes%vars(odes%n_vars))
         ! Initializing the ode variables rhs -- for the rates
         allocate(odes%vars_rhs(odes%n_vars))
+
+        call output_initialize(cfg)
     
     end subroutine init_modules
 
@@ -226,10 +229,13 @@ program zeroDimPlasmaChem
       !print *, "Species list: ", species_list(:)
       !print *, "Specie idx:", specie_idx
       !Obtain the field (E/N) in Townsend units
-      if (gas_constant_density) then
-         tmp = 1 / gas_number_density
-         field(n_cell) = SI_to_Townsend * tmp * field_amplitude
-      end if
+      tmp = 1 / gas_number_density
+      field(n_cell) = SI_to_Townsend * tmp * field_amplitude
+      
+      !if (gas_constant_density) then
+      !   tmp = 1 / gas_number_density
+      !   field(n_cell) = SI_to_Townsend * tmp * field_amplitude
+      !end if
 
       ! Get the specie densities for a given time step or intermediate time step
       dens(n_cell,n_gas_species+1:n_species) = ode_s%vars(specie_idx)
@@ -327,65 +333,65 @@ program zeroDimPlasmaChem
       close(my_unit)
     end subroutine output_solution
     
-    subroutine output_HDF5_solution(odes_s, filename, t, idx)
-      use m_chemistry
-      use m_types
-      use HDF5
-      implicit none
-      type(ode_sys), intent(in) :: odes_s
-      character(len=*), intent(in) :: filename
-      character(len=50), save :: fmt, fmt_header
-      character(len=50) :: test_fmt
-      integer :: my_unit, n, i, n_vars, error, space_rank
-      integer, intent(in) :: idx
-      real(dp), intent(in) :: t
-      logical, save :: first_time = .true.
-      
-      integer(HSIZE_T) :: data_dims(1)
-      integer(HID_T) :: file_id, dspace_id
-      integer(HID_T), allocatable :: dset_id(:)
-      integer :: max_rows = 5
+    !subroutine output_HDF5_solution(odes_s, filename, t, idx)
+    !  use m_chemistry
+    !  use m_types
+    !  use HDF5
+    !  implicit none
+    !  type(ode_sys), intent(in) :: odes_s
+    !  character(len=*), intent(in) :: filename
+    !  character(len=50), save :: fmt, fmt_header
+    !  character(len=50) :: test_fmt
+    !  integer :: my_unit, n, i, n_vars, error, space_rank
+    !  integer, intent(in) :: idx
+    !  real(dp), intent(in) :: t
+    !  logical, save :: first_time = .true.
+    !  
+    !  integer(HSIZE_T) :: data_dims(1)
+    !  integer(HID_T) :: file_id, dspace_id
+    !  integer(HID_T), allocatable :: dset_id(:)
+    !  integer :: max_rows = 5
 
-      
+    !  
 
-      n_vars = odes_s%n_vars
-      allocate(dset_id(n_vars))
-      if (first_time) then
-         first_time = .false.
+    !  n_vars = odes_s%n_vars
+    !  allocate(dset_id(n_vars))
+    !  if (first_time) then
+    !     first_time = .false.
 
-         call h5open_f(error)
+    !     call h5open_f(error)
 
-         call h5fcreate_f(trim(filename), H5F_ACC_TRUNC_F, file_id, error)
+    !     call h5fcreate_f(trim(filename), H5F_ACC_TRUNC_F, file_id, error)
 
-         space_rank = 1
-         data_dims(1) = max_rows
+    !     space_rank = 1
+    !     data_dims(1) = max_rows
 
-         call h5screate_simple_f(space_rank, data_dims, dspace_id, error)
-         do i=1,n_vars
-                call h5dcreate_f(file_id, trim(odes_s%var_names(i)), H5T_NATIVE_DOUBLE, dspace_id, dset_id(i), error)
-                call h5dclose_f(dset_id(i), error)
+    !     call h5screate_simple_f(space_rank, data_dims, dspace_id, error)
+    !     do i=1,n_vars
+    !            call h5dcreate_f(file_id, trim(odes_s%var_names(i)), H5T_NATIVE_DOUBLE, dspace_id, dset_id(i), error)
+    !            call h5dclose_f(dset_id(i), error)
 
-         end do
+    !     end do
 
-         
-
-
+    !     
 
 
-         call h5fclose_f(file_id, error)
 
-         call h5close_f(error)
-         
 
-      end if
+    !     call h5fclose_f(file_id, error)
 
-      !write(fmt, "A, I0, A"), 
-      !fmt = "(E16.8, E16.8)"
-      !open(newunit=my_unit, file=trim(filename), action="write", &
-      !   position="append")
+    !     call h5close_f(error)
+    !     
 
-      !write(my_unit, fmt) t, odes_s%vars(idx)
-      !close(my_unit)
-    end subroutine output_HDF5_solution
+    !  end if
+
+    !  !write(fmt, "A, I0, A"), 
+    !  !fmt = "(E16.8, E16.8)"
+    !  !open(newunit=my_unit, file=trim(filename), action="write", &
+    !  !   position="append")
+
+    !  !write(my_unit, fmt) t, odes_s%vars(idx)
+    !  !close(my_unit)
+    !end subroutine output_HDF5_solution
 end program zeroDimPlasmaChem
 

@@ -2,7 +2,7 @@ FC := gfortran
 FFLAGS := -O3 -Wall  -fcheck=array-temps,bounds,do,mem,pointer -pg -ffpe-trap=invalid,zero,overflow -pedantic -finit-real=snan -fbounds-check
 LDFLAGS := 
 TARGET := zdPlasmaChem
-OBJ := m_chemistry.o m_config.o m_gas.o m_lookup_table.o m_spline_interp.o m_table_data.o m_transport_data.o m_types.o m_units_constants.o main.o
+OBJ := m_chemistry.o m_config.o m_gas.o m_lookup_table.o m_spline_interp.o m_table_data.o m_transport_data.o m_types.o m_units_constants.o m_output.o main.o
 
 HDF5_LIB=/home/hemaditya/hdf5_config_fortran_build/fortran/src
 HDF5_INC=/home/hemaditya/hdf5_config_fortran_build/fortran/src
@@ -22,8 +22,10 @@ m_lookup_table.o: m_lookup_table.f90
 	$(FC) -c $^
 m_types.o: m_types.f90
 	$(FC) -c $^
-main.o: m_types.o m_config.o m_chemistry.o main.f90 m_transport_data.o 
+m_output.o: m_output.f90 m_types.o
 	$(FC) -c $^ -I$(HDF5_INC)
+main.o: m_types.o m_config.o m_chemistry.o main.f90 m_transport_data.o m_output.o
+	$(FC) -c $^ 
 m_units_constants.o: m_units_constants.f90
 	$(FC) -c $^
 m_gas.o: m_gas.f90 m_types.o m_units_constants.o m_config.o m_table_data.o

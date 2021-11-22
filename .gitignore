@@ -3,4 +3,5 @@
 gmon.out
 *.mod
 .vscode
+*.hdf5
 zdPlasmaChem

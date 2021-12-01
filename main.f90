@@ -63,7 +63,7 @@ program zeroDimPlasmaChem
       ! Add functionality to compute the wall clock time 
 
       !print *, "Time: ", time
-      call output_HDF5_solution(odes, trim(output_name), time, i_electron)
+      !call output_HDF5_solution(odes, trim(output_name), time, i_electron)
       call ode_advance(odes, global_dt, &
          species_itree(n_gas_species+1:n_species), time_integrator)
 

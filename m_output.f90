@@ -14,11 +14,32 @@ contains
   !> Initialize this module
   subroutine output_initialize(cfg)
     use m_config
+    use HDF5
 
     type(CFG_t), intent(inout) :: cfg
+    integer :: error
+    integer(HID_T) :: file_id, group_id
 
     call CFG_add_get(cfg, "output%name", output_name, &
       "Name of the output file")
+    !Open fortran interface
+    call h5open_f(error)
+    !print *, "Opening file"
+    !Create file using default properties
+    call h5fcreate_f(output_name, H5F_ACC_TRUNC_F, file_id, error)
+    !Create a group called "times"
+    !print *, "Creating group"
+    call h5gcreate_f(file_id, "times", group_id, error)
+
+    !Close the group
+    call h5gclose_f(group_id, error)
+
+    !print *, "Closing file"
+    !Terminate access to the file
+    call h5fclose_f(file_id, error)
+    !Close fortran interface
+    call h5close_f(error)
+
 
   end subroutine output_initialize
 
@@ -82,7 +103,6 @@ contains
 
         call h5fclose_f(file_id, error)
 
-        call h5close_f(error)
         
 
      end if
@@ -94,6 +114,7 @@ contains
 
      !write(my_unit, fmt) t, odes_s%vars(idx)
      !close(my_unit)
+     call h5close_f(error)
    end subroutine output_HDF5_solution
 
 end module m_output

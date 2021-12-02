@@ -3,12 +3,12 @@ module m_output
   use m_types
 
   implicit none
-  character(len=string_len), public :: output_name
+  character(len=string_len), public, protected :: output_name
 
 
   public :: output_initialize
   public :: output_HDF5_solution
-  !private :: collect_var_names
+  private :: write_var_names
 
 contains
 
@@ -20,12 +20,15 @@ contains
     type(CFG_t), intent(inout) :: cfg
     integer :: error
     integer(HID_T) :: file_id, group_id1, group_id2
+    character(len=string_len) :: outname
 
-    call CFG_add_get(cfg, "output%name", output_name, &
+    call CFG_add_get(cfg, "output%name", outname, &
       "Name of the output file")
 
+    output_name = trim(outname)
+
     call h5open_f(error)
-    call h5fcreate_f(output_name, H5F_ACC_TRUNC_F, file_id, error)
+    call h5fcreate_f(trim(outname) // ".h5", H5F_ACC_TRUNC_F, file_id, error)
 
     call h5gcreate_f(file_id, "times", group_id1, error)
     call h5gclose_f(group_id1, error)
@@ -73,6 +76,8 @@ contains
      if (first_time) then
         first_time = .false.
 
+        call write_var_names(odes_s, filename)
+
         !call h5open_f(error)
         !call h5fopen_f(trim(filename), H5F_ACC_RDWR_F, file_id, error)
 
@@ -104,8 +109,7 @@ contains
      end if
 
      call h5open_f(error)
-     print *,"Opening file"
-     call h5fopen_f(trim(filename), H5F_ACC_RDWR_F, file_id, error)
+     call h5fopen_f(trim(filename) // ".h5", H5F_ACC_RDWR_F, file_id, error)
      call h5gopen_f(file_id, "/times", grp_time_id, error)
      data_dims = n_vars !We need to do this for HDF5 for integer type conversion
      call h5screate_simple_f(1, data_dims, dspace_id, error)
@@ -132,15 +136,38 @@ contains
      !close(my_unit)
    end subroutine output_HDF5_solution
 
+   subroutine write_var_names(o_s, filename)
+     use m_chemistry
+     use m_types
+     implicit none
+     type(ode_sys), intent(in) :: o_s
+     character(len=*), intent(in) :: filename
+     character(len=name_len), allocatable :: var_names(:)
+     integer :: opVarNum
+     integer :: i, iter, f_unit
+     character(len=string_len) :: varFname
 
-   !subroutine collect_var_names(o_s,  names)
-   !  use m_chemistry
-   !  use m_types
-   !  use HDF5
-   !  implicit none
-   !  type(ode_sys), intent(in) :: odes_s
-   !  character(len=*), intent(out) :: names
+     varFname = trim(filename) // "_var_names.txt"
+     opVarNum = sum(o_s%var_matrix)
+     allocate(var_names(1:opVarNum))
+
+     open(newunit=f_unit, file=trim(varFname), action="write")
+     iter = 1
+     do i=1, o_s%n_vars
+      if (o_s%var_matrix(i) == 0) then
+        cycle
+      end if
+      var_names(iter) = o_s%var_names(i)
+      !print *, "write_var_names", trim(var_names(iter))
+      iter = iter + 1
+
+      write(f_unit, "(A)") o_s%var_names(i)
+     end do
+     write(f_unit, *) ""
+     close(f_unit)
+     
    
-   !end subroutine collect_var_names
+   end subroutine write_var_names
+
 
 end module m_output

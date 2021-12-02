@@ -58,7 +58,6 @@ program zeroDimPlasmaChem
 
     global_dt = minval(dt_array)
     ! Setting the initial conditions
-    call init_cond_initialize(odes, cfg)
     print *, "Initial densities: ", odes%vars(i_1pos_ion), odes%vars(i_electron)
     ! Time integration loop here
     do while (time < end_time)
@@ -69,7 +68,7 @@ program zeroDimPlasmaChem
       call ode_advance(odes, global_dt, &
          species_itree(n_gas_species+1:n_species), time_integrator)
 
-      print *, "Electron density: ", odes%vars(i_electron)
+      !print *, "Electron density: ", odes%vars(i_electron)
       !test_varnames = pack(odes%var_names, odes%var_matrix==1)
       !print *, "Varnames: ",pack(odes%vars, odes%var_matrix==1) 
       !print *, "Num actual vars: ", sum(odes%var_matrix)
@@ -109,6 +108,7 @@ program zeroDimPlasmaChem
 
         call cfg_init(odes, cfg)
         call init_variables(odes)
+        call init_cond_initialize(odes, cfg)
         call output_initialize(cfg)
     
     end subroutine init_modules
@@ -153,7 +153,6 @@ program zeroDimPlasmaChem
       n_vars = o_s%n_vars
       !allocate(var_matrix(n_vars))
       var_matrix = o_s%var_matrix
-      print *, "Varnames:", pack(o_s%var_names, var_matrix==1)
 
       
     
@@ -249,6 +248,7 @@ program zeroDimPlasmaChem
     subroutine init_cond_initialize(odes,  cfg)
       use m_config
       use m_table_data
+      use m_gas
       implicit none
       type(ode_sys),intent(inout) :: odes
       type(CFG_t),intent(inout) ::  cfg
@@ -257,6 +257,8 @@ program zeroDimPlasmaChem
       odes%vars(i_electron), "Initial electron density")
       call CFG_add_get(cfg, "init_first_posIon_density", &
       odes%vars(i_1pos_ion), "Initial first positive ion density")
+
+      odes%vars(i_e_fld) = field_amplitude
     
     end subroutine init_cond_initialize
 

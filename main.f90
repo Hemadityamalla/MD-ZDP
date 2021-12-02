@@ -33,6 +33,7 @@ program zeroDimPlasmaChem
     real(dp), allocatable :: field_table_times(:)
     real(dp), allocatable :: field_table_fields(:)
     real(dp) :: init_specie_density(2)
+    integer :: test_iterator
     !character(len=string_len) :: output_name
 
     print *, "Inside main prog"
@@ -41,18 +42,19 @@ program zeroDimPlasmaChem
     
     print *, "Integration method to be used ", integrator !Debug line
     print *, "ODE system number of variables: ", odes%n_vars !Debug linr
-    print *, "ODE system variable names: ", odes%var_names(1:odes%n_vars) !Debug linr
+    !print *, "ODE system variable names: ", odes%var_names(1:odes%n_vars) !Debug linr
     print *, "Initial field value: ", field_amplitude
     print *, "First positive ion: ", odes%var_names(i_1pos_ion)
     print *, "N_gas_species: ", n_gas_species
     print *, "N_species: ", n_species
     print *, "Species list: ", species_list(n_gas_species+1:n_species)
     print *, "species_itree: ", species_itree(n_gas_species+1:n_species)
-    print *, "Index of electric field, electron: ", find_ode_var(odes, "electric_fld"), find_ode_var(odes, "e")
+    !print *, "Index of electric field, electron: ", find_ode_var(odes, "electric_fld"), find_ode_var(odes, "e")
     ! End debug lines
 
 
     time = 0.0_dp
+    test_iterator = 0
 
     global_dt = minval(dt_array)
     ! Setting the initial conditions
@@ -62,17 +64,23 @@ program zeroDimPlasmaChem
     do while (time < end_time)
       ! Add functionality to compute the wall clock time 
 
-      !print *, "Time: ", time
-      !call output_HDF5_solution(odes, trim(output_name), time, i_electron)
+      print *, "Time: ", time
+      call output_HDF5_solution(odes, trim(output_name), time, test_iterator)
       call ode_advance(odes, global_dt, &
          species_itree(n_gas_species+1:n_species), time_integrator)
 
-      !print *, "Electron density: ", odes%vars(i_electron)
+      print *, "Electron density: ", odes%vars(i_electron)
+      !test_varnames = pack(odes%var_names, odes%var_matrix==1)
+      !print *, "Varnames: ",pack(odes%vars, odes%var_matrix==1) 
+      !print *, "Num actual vars: ", sum(odes%var_matrix)
       time = time + global_dt
+      test_iterator = test_iterator + 1
 
 
 
     end do
+    !Outputting the last value of the simulation
+    call output_HDF5_solution(odes, trim(output_name), time, test_iterator)
     
 
     print *, "End of simulation"
@@ -100,14 +108,56 @@ program zeroDimPlasmaChem
         call dt_initialize(cfg)
 
         call cfg_init(odes, cfg)
-        ! Initializing the ode variables
-        allocate(odes%vars(odes%n_vars))
-        ! Initializing the ode variables rhs -- for the rates
-        allocate(odes%vars_rhs(odes%n_vars))
-
+        call init_variables(odes)
         call output_initialize(cfg)
     
     end subroutine init_modules
+    
+    subroutine init_variables(odes)
+      use m_chemistry
+      use m_gas
+      implicit none
+      type(ode_sys),intent(inout) :: odes
+      integer :: i
+
+      ! Initializing the ode variables
+      allocate(odes%vars(1:odes%n_vars))
+      ! Initializing the ode variables rhs -- for the rates
+      allocate(odes%vars_rhs(1:odes%n_vars))
+      ! Initializing the output variable location array
+      allocate(odes%var_matrix(1:odes%n_vars))
+      !Initializing the above stuff to zero just to be clear
+      odes%vars(1:odes%n_vars) = 0.0_dp
+      odes%vars_rhs(1:odes%n_vars) = 0.0_dp
+      odes%var_matrix(1:odes%n_vars) = 0
+
+      !The standard gas properties (when they are constant)
+      do i=1,4
+         odes%var_matrix(i) = 1
+      end do
+      do i= 1, n_species - n_gas_species
+         odes%var_matrix(species_itree(n_gas_species+i)) = 1
+      end do
+      print *,"Var matrix: ", odes%var_matrix(:)
+      
+
+    end subroutine init_variables
+
+
+    subroutine print_var_vals(o_s)
+      implicit none
+      type(ode_sys),intent(in) :: o_s
+      integer, allocatable :: var_matrix(:)
+      integer :: n_vars
+      integer :: i
+      n_vars = o_s%n_vars
+      !allocate(var_matrix(n_vars))
+      var_matrix = o_s%var_matrix
+      print *, "Varnames:", pack(o_s%var_names, var_matrix==1)
+
+      
+    
+    end subroutine print_var_vals
 
     subroutine dt_initialize(cfg)
         use m_config
@@ -267,10 +317,10 @@ program zeroDimPlasmaChem
    
       select case (integrator_type)
       case(fwd_euler)
-         print *, "Inside ode_advance, fwd_euler, var_idx: ", var_idx
-         print *, "Print ode_rhs using var_idx", ode_s%vars_rhs(var_idx)
+         !print *, "Inside ode_advance, fwd_euler, var_idx: ", var_idx
+         !print *, "Print ode_rhs using var_idx", ode_s%vars_rhs(var_idx)
          call compute_rhs(ode_s, var_idx)
-         print *, "Print ode_rhs using var_idx after update", ode_s%vars_rhs(var_idx)
+         !print *, "Print ode_rhs using var_idx after update", ode_s%vars_rhs(var_idx)
          ode_s%vars(var_idx) = ode_s%vars(var_idx) + dt*ode_s%vars_rhs(var_idx)
          
       case(rk2)

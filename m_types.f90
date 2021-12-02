@@ -27,6 +27,8 @@ module m_types
     integer :: var_num_copies(max_var_lim) = 1
     real(dp), allocatable :: vars(:)
     real(dp), allocatable :: vars_rhs(:)
+    ! Below: array of size n_vars, entry is 1 if output variable, else 0
+    integer, allocatable :: var_matrix(:)
   end type ode_sys
 
   contains

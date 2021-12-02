@@ -161,7 +161,7 @@ contains
       !print *, "write_var_names", trim(var_names(iter))
       iter = iter + 1
 
-      write(f_unit, "(A)") o_s%var_names(i)
+      write(f_unit, "(A)") trim(o_s%var_names(i))
      end do
      write(f_unit, *) ""
      close(f_unit)

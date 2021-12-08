@@ -26,7 +26,7 @@ all: $(TARGET)
 .PHONY: clean
 
 clean:
-	rm -f $(OBJ) *.mod $(TARGET) *.o gmon.out
+	rm -f $(OBJ) *.mod $(TARGET) *.o gmon.out *.h5 *_var_names.txt
 
 # Dependencies
 $(TARGET): $(OBJ)

@@ -157,7 +157,7 @@ module m_chemistry
 contains
 
   !> Initialize module and load chemical reactions
-  subroutine chemistry_initialize(odes, cfg)
+  subroutine chemistry_initialize(odes, cfg, var_ncopies)
     use m_config
     use m_units_constants
     use m_table_data
@@ -165,6 +165,7 @@ contains
     use m_gas
     type(CFG_t), intent(inout) :: cfg
     type(ode_sys), intent(inout) :: odes
+    integer, intent(in) :: var_ncopies
     integer                    :: n, i, i_elec
     character(len=string_len)  :: reaction_file
     character(len=comp_len)    :: tmp_name
@@ -266,7 +267,7 @@ contains
 
     do n = n_gas_species+1, n_species
        call add_ode_var(odes, trim(species_list(n)), &
-            n_copies=2, &
+            n_copies=var_ncopies, &
             ix=species_itree(n))
     end do
 

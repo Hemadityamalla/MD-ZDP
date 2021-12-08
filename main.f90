@@ -102,10 +102,11 @@ program zeroDimPlasmaChem
         call transport_data_initialize(cfg)
         call gas_initialize(odes, cfg)
         call field_initialize(odes, cfg)
-        !Read the input reactions
-        call chemistry_initialize(odes, cfg)
         !Initialize dt values and the type of time integrator to be used
         call dt_initialize(cfg)
+        !Read the input reactions
+        call chemistry_initialize(odes, cfg, & 
+         integration_advance_steps(time_integrator))
 
         call cfg_init(odes, cfg)
         call init_variables(odes)
@@ -185,7 +186,7 @@ program zeroDimPlasmaChem
            print *, "Time integrator: ", trim(integrator)
            error stop "Invalid time integrator"
         end select
-        dt_array = dt_max
+        dt_array = (/dt_max, dt_min/)
     
     end subroutine dt_initialize
 
@@ -231,10 +232,8 @@ program zeroDimPlasmaChem
       type(CFG_t),intent(inout) ::  cfg
       character(len=string_len) :: field_table
 
-      print *,"Field adding odevbar", odes%n_vars
       call add_ode_var(odes, "electric_fld", ix=i_e_fld)
       field_table = undefined_str
-      print *,"Field adding odevbar", odes%n_vars
       call CFG_add_get(cfg, "field_table", field_table, "File containing applied electric field (V/m) versus time")
       if (field_table /= undefined_str) then
          field_table_use = .true.

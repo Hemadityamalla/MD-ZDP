@@ -1,4 +1,4 @@
-#include "../afivo/src/cpp_macros.h"
+#include "cpp_macros.h"
 !> Module that stores parameters related to the gas
 module m_gas
   use m_types
@@ -65,11 +65,9 @@ contains
     type(ode_sys), intent(inout) :: odes
     integer :: n
 
-    print *,"gas adding odevbar", odes%n_vars
     call add_ode_var(odes, "gas_density", ix=i_gas_dens)
     call add_ode_var(odes, "gas_pressure", ix=i_gas_pres)
     call add_ode_var(odes, "gas_temperature", ix=i_gas_temp)
-    print *,"gas adding odevbar", odes%n_vars
 
 
     call CFG_add_get(cfg, "gas%pressure", gas_pressure, &
@@ -83,7 +81,7 @@ contains
     gas_number_density = 1e5_dp * gas_pressure / &
          (UC_boltzmann_const * gas_temperature)
     gas_inverse_number_density = 1/gas_number_density
-    print *, "Inside gas init, gas number density: ", gas_number_density
+    !print *, "Inside gas init, gas number density: ", gas_number_density
 
     call CFG_add(cfg, "gas%components", ["N2", "O2"], &
          "Gas component names", .true.)

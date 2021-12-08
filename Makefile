@@ -4,6 +4,7 @@ LDFLAGS :=
 TARGET := main
 # Required due to bug: https://bugzilla.redhat.com/show_bug.cgi?id=1971826
 INCDIRS := /usr/lib64/gfortran/modules
+VPATH := src
 
 OBJ := m_chemistry.o m_config.o m_gas.o m_lookup_table.o m_spline_interp.o m_output.o	\
 m_table_data.o m_transport_data.o m_types.o m_units_constants.o main.o

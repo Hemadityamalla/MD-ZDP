@@ -22,7 +22,7 @@ module m_types
   integer, parameter :: dp = kind(0.0d0)
 
   type ode_sys
-    integer :: n_vars
+    integer :: n_vars = 0
     character(len=name_len) :: var_names(max_var_lim)
     integer :: var_num_copies(max_var_lim) = 1
     real(dp), allocatable :: vars(:)

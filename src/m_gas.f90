@@ -65,9 +65,11 @@ contains
     type(ode_sys), intent(inout) :: odes
     integer :: n
 
+    print *,"gas adding odevbar", odes%n_vars
     call add_ode_var(odes, "gas_density", ix=i_gas_dens)
     call add_ode_var(odes, "gas_pressure", ix=i_gas_pres)
     call add_ode_var(odes, "gas_temperature", ix=i_gas_temp)
+    print *,"gas adding odevbar", odes%n_vars
 
 
     call CFG_add_get(cfg, "gas%pressure", gas_pressure, &

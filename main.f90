@@ -36,7 +36,7 @@ program zeroDimPlasmaChem
     integer :: test_iterator
     !character(len=string_len) :: output_name
 
-    print *, "Inside main prog"
+    print *, "Inside main prog:", odes%n_vars
     call CFG_update_from_arguments(cfg)
     call init_modules(cfg, odes)
     
@@ -63,7 +63,7 @@ program zeroDimPlasmaChem
     do while (time < end_time)
       ! Add functionality to compute the wall clock time 
 
-      print *, "Time: ", time
+      !print *, "Time: ", time
       call output_HDF5_solution(odes, trim(output_name), time, test_iterator)
       call ode_advance(odes, global_dt, &
          species_itree(n_gas_species+1:n_species), time_integrator)
@@ -96,6 +96,7 @@ program zeroDimPlasmaChem
         type(ode_sys),intent(inout) :: odes
         !Initialize the time steps here
 
+        print *, "Beginning init modules:", odes%n_vars
         !Initialize the tables used for some reaction rates
         call table_data_initialize(cfg)
         call transport_data_initialize(cfg)
@@ -138,7 +139,7 @@ program zeroDimPlasmaChem
       do i= 1, n_species - n_gas_species
          odes%var_matrix(species_itree(n_gas_species+i)) = 1
       end do
-      print *,"Var matrix: ", odes%var_matrix(:)
+      !print *,"Var matrix: ", odes%var_matrix(:)
       
 
     end subroutine init_variables
@@ -230,8 +231,10 @@ program zeroDimPlasmaChem
       type(CFG_t),intent(inout) ::  cfg
       character(len=string_len) :: field_table
 
+      print *,"Field adding odevbar", odes%n_vars
       call add_ode_var(odes, "electric_fld", ix=i_e_fld)
       field_table = undefined_str
+      print *,"Field adding odevbar", odes%n_vars
       call CFG_add_get(cfg, "field_table", field_table, "File containing applied electric field (V/m) versus time")
       if (field_table /= undefined_str) then
          field_table_use = .true.

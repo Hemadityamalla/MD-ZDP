@@ -1,47 +1,71 @@
-FC := gfortran
-FFLAGS := -O3 -Wall  -fcheck=array-temps,bounds,do,mem,pointer -pg -ffpe-trap=invalid,zero,overflow -pedantic -finit-real=snan -fbounds-check
-LDFLAGS := 
-TARGET := zdPlasmaChem
-OBJ := m_chemistry.o m_config.o m_gas.o m_lookup_table.o m_spline_interp.o m_table_data.o m_transport_data.o m_types.o m_units_constants.o m_output.o main.o
+FC := /usr/bin/h5fc
+FFLAGS := -O3 -Wall -fcheck=all -cpp
+LDFLAGS :=
+TARGET := main
+# Required due to bug: https://bugzilla.redhat.com/show_bug.cgi?id=1971826
+INCDIRS := /usr/lib64/gfortran/modules
 
-HDF5_LIB=/home/hemaditya/hdf5_config_fortran_build/fortran/src
-HDF5_INC=/home/hemaditya/hdf5_config_fortran_build/fortran/src
-HDF5_FLAGS=-lhdf5 -lhdf5_fortran
+OBJ := m_chemistry.o m_config.o m_gas.o m_lookup_table.o m_spline_interp.o m_output.o	\
+m_table_data.o m_transport_data.o m_types.o m_units_constants.o main.o
 
 all: $(TARGET)
 
-$(TARGET): $(OBJ)
-	$(FC) $(FFLAGS) -L$(HDF5_LIB) -o $@ $^ $(LDFLAGS) -D NDIM=0 $(HDF5_FLAGS)
+# How to get .o object files from .f90 source files
+%.o: %.f90
+	$(FC) -c -o $@ $< $(FFLAGS) $(addprefix -I,$(INCDIRS))
 
+# How to get .mod files from .f90 source files (remake only if they have been
+# removed, otherwise assume they are up to date)
+%.mod: %.f90 %.o
+	@test -f $@ || $(FC) -c -o $(@:.mod=.o) $< $(FFLAGS) $(addprefix -I,$(INCDIRS))
 
-m_config.o: m_config.f90
-	$(FC) -c $^
-m_spline_interp.o: m_spline_interp.f90
-	$(FC) -c $^
-m_lookup_table.o: m_lookup_table.f90
-	$(FC) -c $^
-m_types.o: m_types.f90
-	$(FC) -c $^
-m_output.o: m_output.f90 m_types.o
-	$(FC) -c $^ -I$(HDF5_INC)
-main.o: m_types.o m_config.o m_chemistry.o main.f90 m_transport_data.o m_output.o
-	$(FC) -c $^ 
-m_units_constants.o: m_units_constants.f90
-	$(FC) -c $^
-m_gas.o: m_gas.f90 m_types.o m_units_constants.o m_config.o m_table_data.o
-	$(FC) -c $^
-m_table_data.o: m_table_data.f90 m_types.o m_spline_interp.o m_config.o m_lookup_table.o
-	$(FC) -c $^
-
-m_transport_data.o: m_transport_data.f90 m_lookup_table.o m_spline_interp.o m_types.o m_config.o m_table_data.o m_units_constants.o m_gas.o
-	$(FC) -c $^
-
-m_chemistry.o: m_chemistry.f90 m_types.o m_lookup_table.o m_table_data.o m_units_constants.o m_transport_data.o m_config.o
-	$(FC) -c $^
-
-
+# How to get executables from .o object files
+%: %.o
+	$(FC) -o $@ $^ $(FFLAGS) $(addprefix -L,$(LIBDIRS)) $(addprefix -l,$(LIBS))
 
 .PHONY: clean
 
 clean:
 	rm -f $(OBJ) *.mod $(TARGET) *.o gmon.out
+
+# Dependencies
+$(TARGET): $(OBJ)
+
+# Generated with list_dependencies.sh
+
+example_1.o: m_config.mod
+example_2.o: m_config.mod
+main.o: m_chemistry.mod
+main.o: m_config.mod
+main.o: m_gas.mod
+main.o: m_lookup_table.mod
+main.o: m_output.mod
+main.o: m_table_data.mod
+main.o: m_transport_data.mod
+main.o: m_types.mod
+main.o: m_units_constants.mod
+m_chemistry.o: m_config.mod
+m_chemistry.o: m_gas.mod
+m_chemistry.o: m_lookup_table.mod
+m_chemistry.o: m_table_data.mod
+m_chemistry.o: m_transport_data.mod
+m_chemistry.o: m_types.mod
+m_chemistry.o: m_units_constants.mod
+m_gas.o: m_config.mod
+m_gas.o: m_table_data.mod
+m_gas.o: m_types.mod
+m_gas.o: m_units_constants.mod
+m_output.o: m_chemistry.mod
+m_output.o: m_config.mod
+m_output.o: m_types.mod
+m_table_data.o: m_config.mod
+m_table_data.o: m_lookup_table.mod
+m_table_data.o: m_spline_interp.mod
+m_table_data.o: m_types.mod
+m_transport_data.o: m_config.mod
+m_transport_data.o: m_gas.mod
+m_transport_data.o: m_lookup_table.mod
+m_transport_data.o: m_spline_interp.mod
+m_transport_data.o: m_table_data.mod
+m_transport_data.o: m_types.mod
+m_transport_data.o: m_units_constants.mod

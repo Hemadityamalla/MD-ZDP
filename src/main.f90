@@ -13,6 +13,7 @@ program zeroDimPlasmaChem
     integer, parameter :: dt_ix_chem = 1
     integer, parameter :: dt_ix_drt = 2
     real(dp), parameter :: dt_safety_factor = 0.9_dp
+    real(dp), parameter :: dt_chem_nmin = 1e11_dp
     real(dp) :: time, global_dt
     real(dp) :: end_time
     real(dp) :: dt_max = 1e-11_dp
@@ -56,14 +57,14 @@ program zeroDimPlasmaChem
     time = 0.0_dp
     test_iterator = 0
 
-    global_dt = minval(dt_array)
+    global_dt = maxval(dt_array)
     ! Setting the initial conditions
     print *, "Initial densities: ", odes%vars(i_1pos_ion), odes%vars(i_electron)
     ! Time integration loop here
     do while (time < end_time)
       ! Add functionality to compute the wall clock time 
 
-      print *, "Time: ", time
+      !print *, "Time: ", time
       call output_HDF5_solution(odes, trim(output_name), time, test_iterator)
       call ode_advance(odes, global_dt, &
          species_itree(n_gas_species+1:n_species), time_integrator)
@@ -364,6 +365,7 @@ program zeroDimPlasmaChem
       real(dp) ::  ne, E_vm
       real(dp) :: mobility
       real(dp), parameter :: eps = 1e-100_dp
+      real(dp) :: ratio = 0.0_dp
       real(dp) :: Td
 
     !Computing the dielectric relaxation time
@@ -372,12 +374,13 @@ program zeroDimPlasmaChem
     Td = E_vm*SI_to_Townsend/gas_number_density
     mobility =  LT_get_col(td_tbl, td_mobility, Td)/gas_number_density
     dt(dt_ix_drt) = UC_eps0/max(UC_elem_charge*mobility*ne, eps)
+    !dt(dt_ix_drt) = 1e+19
     !Computing the chemistry time
-    dt(dt_ix_chem)  = maxval(o_s%vars(& 
-      species_itree(n_gas_species+1:n_species))) & 
-      / max(maxval( &
-      o_s%vars_rhs(species_itree(n_gas_species+1:n_species))), eps)
-    
+    ratio = minval((abs(o_s%vars(species_itree(n_gas_species+1:n_species))) &
+      + dt_chem_nmin)/& 
+      max(abs(o_s%vars_rhs(species_itree(n_gas_species+1:n_species))),eps))
+
+    dt(dt_ix_chem)  = ratio    
     end subroutine dt_constraints
 
     !Subroutine that outputs the simulation data as a .txt file

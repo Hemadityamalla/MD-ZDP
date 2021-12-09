@@ -43,13 +43,15 @@ axs[0,1].set_title("Electric field")
 axs[0,1].plot(t_steps, [x[3] for x in large_array], label=fi_vars[3])
 axs[0,1].legend()
 #Third plot has all the species stuff
+scaling = 1e-15
 cmap = plt.cm.get_cmap("gist_rainbow")
 axs[1,1].set_title("Specie densities")
 for i in range(4,len(fi_vars)):
     c = cmap(float(i)/len(fi_vars))
     var_vals = np.array([x[i] for x in large_array])
-    axs[1,1].plot(t_steps, var_vals, color=c, label=fi_vars[i])
-axs[1,1].set_yscale("log")
+    axs[1,1].plot(t_steps, var_vals*scaling, color=c, label=fi_vars[i])
+#axs[1,1].set_yscale("log")
+axs[1,1].set_ylabel("density*"+str(scaling))
 axs[1,1].legend()
 plt.show()
 

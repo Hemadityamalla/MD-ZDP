@@ -63,6 +63,11 @@ program zeroDimPlasmaChem
     ! Time integration loop here
     do while (time < end_time)
       ! Add functionality to compute the wall clock time 
+      if (global_dt < dt_min) then
+         print *, "dt(", global_dt, ") smaller than dt_min(", dt_min, ")"
+         error stop "dt too small"
+
+      endif
 
       if (mod(test_iterator, 10) == 0) then
          print *, "Time: ", time

@@ -57,15 +57,17 @@ program zeroDimPlasmaChem
     time = 0.0_dp
     test_iterator = 0
 
-    global_dt = maxval(dt_array)
+    global_dt = 0.1_dp*maxval(dt_array)
     ! Setting the initial conditions
     print *, "Initial densities: ", odes%vars(i_1pos_ion), odes%vars(i_electron)
     ! Time integration loop here
     do while (time < end_time)
       ! Add functionality to compute the wall clock time 
 
-      !print *, "Time: ", time
-      call output_HDF5_solution(odes, trim(output_name), time, test_iterator)
+      if (mod(test_iterator, 10) == 0) then
+         print *, "Time: ", time
+         call output_HDF5_solution(odes, trim(output_name), time, test_iterator)
+      endif
       call ode_advance(odes, global_dt, &
          species_itree(n_gas_species+1:n_species), time_integrator)
 
@@ -74,7 +76,7 @@ program zeroDimPlasmaChem
       !print *, "Varnames: ",pack(odes%vars, odes%var_matrix==1) 
       !print *, "Num actual vars: ", sum(odes%var_matrix)
       call dt_constraints(dt_array, odes)
-      !print *, "dt array: ", dt_array
+      print *, "dt array: ", dt_array
       global_dt = min(minval(dt_array), dt_max)
       time = time + global_dt
       test_iterator = test_iterator + 1

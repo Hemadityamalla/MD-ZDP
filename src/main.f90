@@ -35,6 +35,7 @@ program zeroDimPlasmaChem
     real(dp), allocatable :: field_table_fields(:)
     real(dp) :: init_specie_density(2)
     integer :: test_iterator
+    integer :: output_number = 50
     !character(len=string_len) :: output_name
 
     print *, "Inside main prog:"
@@ -69,7 +70,7 @@ program zeroDimPlasmaChem
 
       endif
 
-      if (mod(test_iterator, 10) == 0) then
+      if (mod(test_iterator, output_number) == 0) then
          print *, "Time: ", time
          call output_HDF5_solution(odes, trim(output_name), time, test_iterator)
       endif
@@ -82,7 +83,7 @@ program zeroDimPlasmaChem
       !print *, "Num actual vars: ", sum(odes%var_matrix)
       call dt_constraints(dt_array, odes)
       print *, "dt array: ", dt_array
-      global_dt = min(minval(dt_array), dt_max)
+      global_dt = min(dt_safety_factor*minval(dt_array), 2*dt_max)
       time = time + global_dt
       test_iterator = test_iterator + 1
 
@@ -379,8 +380,9 @@ program zeroDimPlasmaChem
     ne = o_s%vars(i_electron)
     E_vm = o_s%vars(4) !TODO:make this better
     Td = E_vm*SI_to_Townsend/gas_number_density
+    print *,"Td: ", Td
     mobility =  LT_get_col(td_tbl, td_mobility, Td)/gas_number_density
-    dt(dt_ix_drt) = UC_eps0/max(UC_elem_charge*mobility*ne, eps)
+    dt(dt_ix_drt) = UC_eps0/(UC_elem_charge*max(mobility*ne, eps))
     !dt(dt_ix_drt) = 1e+19
     !Computing the chemistry time
     ratio = minval((abs(o_s%vars(species_itree(n_gas_species+1:n_species))) &

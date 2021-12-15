@@ -60,10 +60,11 @@ program zeroDimPlasmaChem
 
     global_dt = 0.1_dp*maxval(dt_array)
     ! Setting the initial conditions
-    print *, "Initial densities: ", odes%vars(i_1pos_ion), odes%vars(i_electron)
+    print *, "Initial densities: ", &
+       odes%vars(species_itree(n_gas_species+1:n_species))
     ! Time integration loop here
     do while (time < end_time)
-      print *, "Error: ", exp(1.0e-16*2.4143212320551650E+25*time)-odes%vars(i_electron)
+      !print *, "Error: ", exp(1.0e-16*2.4143212320551650E+25*time)-odes%vars(i_electron)
       ! Add functionality to compute the wall clock time 
       if (global_dt < dt_min) then
          print *, "dt(", global_dt, ") smaller than dt_min(", dt_min, ")"
@@ -265,15 +266,65 @@ program zeroDimPlasmaChem
       use m_config
       use m_table_data
       use m_gas
+      use m_chemistry
       implicit none
       type(ode_sys),intent(inout) :: odes
       type(CFG_t),intent(inout) ::  cfg
+      real(dp) :: empty_real(0)
+      integer :: n_cond, varsize, n, sp_idx, nn
+      real(dp), allocatable :: ic_dens(:)
+      real(dp), allocatable :: ic_dens2(:)
+      character(len=name_len), allocatable :: ic_names2(:)
+      character(len=string_len) :: empty_string(0)
+      ! The idea is to have an array of size 3 for the initial conditions
+      ! Array ic_dens: [electron dens, positive ion dens]
+      ! To initialize the densities of other species,
+      ! they need to be supplied separately using ic_dens2
 
-      call CFG_add_get(cfg, "init_electron_density", &
-      odes%vars(i_electron), "Initial electron density")
-      call CFG_add_get(cfg, "init_first_posIon_density", &
-      odes%vars(i_1pos_ion), "Initial first positive ion density")
+      !call CFG_add_get(cfg, "init_electron_density", &
+      !odes%vars(i_electron), "Initial electron density")
+      !call CFG_add_get(cfg, "init_first_posIon_density", &
+      !odes%vars(i_1pos_ion), "Initial first positive ion density")
 
+      call CFG_add(cfg, "init_density", empty_real, &
+         "Initial density of electron and first positive ion (1/m3)", .true.)
+      call CFG_get_size(cfg, "init_density", n_cond)
+      if (n_cond /= 2) &
+         stop "init_dens size has incompatible size (must be 2)"
+      allocate(ic_dens(1:n_cond))
+      call CFG_get(cfg, "init_density", ic_dens)
+      odes%vars(i_electron) = ic_dens(1)
+      odes%vars(i_1pos_ion) = ic_dens(n_cond)
+      call CFG_add(cfg, "init_density2", empty_real, &
+         "Initial densities of other species (1/m3)", .true.)
+      call CFG_add(cfg, "init_density2_names", empty_string, &
+         "Names of other species", .true.)
+      call CFG_get_size(cfg, "init_density2", varsize)
+      if (varsize > 0) then
+         allocate(ic_dens2(1:varsize))
+         allocate(ic_names2(1:varsize))
+         call CFG_get(cfg, "init_density2", ic_dens2)
+         call CFG_get(cfg, "init_density2_names", ic_names2)
+         sp_idx = -1
+         do n=1,varsize
+            do nn=1, n_species
+               if (species_list(nn) /= trim(ic_names2(n))) then
+                  cycle
+               else
+                  sp_idx = species_itree(nn)
+                  exit
+               end if
+            end do
+            if (sp_idx == -1) &
+               stop "Other specie name incorrect or doesnt exist"
+            odes%vars(sp_idx) = ic_dens2(n)
+         end do
+
+      end if
+
+
+      !Initializing the field amplitude.
+      !TODO: This will change if a field table is supplied
       odes%vars(i_e_fld) = field_amplitude
     
     end subroutine init_cond_initialize

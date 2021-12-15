@@ -3,6 +3,7 @@ program zeroDimPlasmaChem
     use m_chemistry
     use m_types
     use m_output
+    use m_gas
     implicit none
 
     type(CFG_t) :: cfg 
@@ -33,6 +34,7 @@ program zeroDimPlasmaChem
     real(dp) ::  field_amplitude
     real(dp), allocatable :: field_table_times(:)
     real(dp), allocatable :: field_table_fields(:)
+    real(dp), parameter :: lorge_num = 1e50_dp
     real(dp) :: init_specie_density(2)
     integer :: test_iterator
     integer :: output_number = 1
@@ -60,8 +62,9 @@ program zeroDimPlasmaChem
 
     global_dt = 0.1_dp*maxval(dt_array)
     ! Setting the initial conditions
-    print *, "Initial densities: ", &
-       odes%vars(species_itree(n_gas_species+1:n_species))
+    !print *, "Initial densities: ", &
+    !   odes%vars(species_itree(n_gas_species+1:n_species))
+    print *, "EFLD: ", odes%vars(i_e_fld)*1e21_dp/gas_number_density
     ! Time integration loop here
     do while (time < end_time)
       !print *, "Error: ", exp(1.0e-16*2.4143212320551650E+25*time)-odes%vars(i_electron)
@@ -79,6 +82,8 @@ program zeroDimPlasmaChem
       call ode_advance(odes, global_dt, &
          species_itree(n_gas_species+1:n_species), time_integrator)
 
+      if (abs(odes%vars(i_electron)) > lorge_num) &
+         stop "Simulation blowing up! Check your input data!"
       !print *, "Electron density: ", odes%vars(i_electron)
       !print *, "Exact: ", exp(1.0e-16*2.4143212320551650E+25*time)
       !test_varnames = pack(odes%var_names, odes%var_matrix==1)
@@ -360,7 +365,7 @@ program zeroDimPlasmaChem
       dens(n_cell,n_gas_species+1:n_species) = ode_s%vars(specie_idx)
 
       call get_rates(field, rates, n_cell)
-      !print *, "Rates: ", rates
+      print *, "Rates: ", rates
 
       call get_derivatives(dens, rates, derivs, n_cell)
       !print *, "Derivatives: ", derivs

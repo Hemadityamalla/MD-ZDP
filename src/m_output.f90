@@ -9,6 +9,7 @@ module m_output
   public :: output_initialize
   public :: output_HDF5_solution
   private :: write_var_names
+  private :: write_time_steps
 
 contains
 
@@ -33,7 +34,7 @@ contains
     call h5gcreate_f(file_id, "times", group_id1, error)
     call h5gclose_f(group_id1, error)
 
-    !call h5gcreate_f(file_id, "ode_var_names", group_id2, error)
+    !call h5gcreate_f(file_id, "tsteps", group_id2, error)
     !call h5gclose_f(group_id2, error)
 
     call h5fclose_f(file_id, error)
@@ -70,43 +71,14 @@ contains
      !allocate(dset_id(n_vars))
 
 
-     !write(dset_name, "(A,1E10.5)") "time_", t
+     !write(dset_name, "(A,E15.6)") "time_", t
      write(dset_name, "(A,I0.6)") "time_", iter 
 
      if (first_time) then
         first_time = .false.
-
         call write_var_names(odes_s, filename)
-
-        !call h5open_f(error)
-        !call h5fopen_f(trim(filename), H5F_ACC_RDWR_F, file_id, error)
-
-        !odeVar_rank = 1
-        !data_dims(1) = n_vars
-
-        !call h5screate_simple_f(odeVar_rank, data_dims, odeVar_dspace_i, error)
-        !call h5dcreate_f(file_id, "ode_var_names", H5T_FORTRAN_S1, &
-        !   odeVar_dspace_i, odeVar_dset_i, error)
-        !dvar_i = 1
-        !! Writing the gas properties and the electric field
-        !do i=1,4
-        !       call h5dcreate_f(file_id, trim(odes_s%var_names(i)), &
-        !             H5T_NATIVE_DOUBLE, dspace_id, dset_id(dvar_i), error)
-        !       call h5dclose_f(dset_id(dvar_i), error)
-        !       dvar_i = dvar_i + 1
-
-        !end do
-        !! Writing the specie densities
-        !do i= 1, n_species - n_gas_species
-        !       call h5dcreate_f(file_id, & 
-        !            trim(odes_s%var_names(species_itree(n_gas_species+i))), &
-        !             H5T_NATIVE_DOUBLE, dspace_id, dset_id(dvar_i), error)
-        !       call h5dclose_f(dset_id(dvar_i), error)
-        !       dvar_i = dvar_i + 1
-        !end do
-        !call h5fclose_f(file_id, error)
-        !call h5close_f(error)
      end if
+     call write_time_steps(t, filename)
 
      call h5open_f(error)
      call h5fopen_f(trim(filename) // ".h5", H5F_ACC_RDWR_F, file_id, error)
@@ -163,11 +135,29 @@ contains
 
       write(f_unit, "(A)") trim(o_s%var_names(i))
      end do
-     write(f_unit, *) ""
+     write(f_unit, "(A)")"-----------------------"
      close(f_unit)
      
    
    end subroutine write_var_names
+   subroutine write_time_steps(time, filename)
+     use m_types
+     implicit none
+     real(dp), intent(in) :: time
+     character(len=*), intent(in) :: filename
+     integer :: opVarNum
+     integer :: i, iter, f_unit
+     character(len=string_len) :: varFname
+
+     varFname = trim(filename) // "_var_names.txt"
+
+     open(newunit=f_unit, file=trim(varFname), action="write", &
+        position="append")
+      write(f_unit, "(E16.8)") time
+     close(f_unit)
+     
+   
+   end subroutine write_time_steps
 
 
 end module m_output

@@ -26,8 +26,17 @@ time_dbs = list(timeGroup.items())
 large_array = [x[1][...] for x in time_dbs]
 
 
-# Temporarily writing out the timesteps
-t_steps = np.arange(len(time_dbs_names))
+# Obtaining the timesteps
+tstart = 0
+var_end = 0
+for i,val in enumerate(fi_vars):
+    if val.startswith("----"):
+        var_end = i
+        tstart = i+1
+        break
+t_step = fi_vars[tstart:]
+t_steps = [float(x.lstrip()) for x in t_step]
+
 
 
 
@@ -43,14 +52,15 @@ axs[0,1].set_title("Electric field")
 axs[0,1].plot(t_steps, [x[3] for x in large_array], label=fi_vars[3])
 axs[0,1].legend()
 #Third plot has all the species stuff
-scaling = 1e-15
+scaling = 1e-6
 cmap = plt.cm.get_cmap("gist_rainbow")
 axs[1,1].set_title("Specie densities")
-for i in range(4,len(fi_vars)):
-    c = cmap(float(i)/len(fi_vars))
+for i in range(4,var_end):
+    c = cmap(float(i)/var_end)
     var_vals = np.array([x[i] for x in large_array])
     axs[1,1].plot(t_steps, var_vals*scaling, color=c, label=fi_vars[i])
-#axs[1,1].set_yscale("log")
+axs[1,1].set_yscale("log")
+axs[1,1].set_ylim([1e0, 1e20])
 axs[1,1].set_ylabel("density*"+str(scaling))
 axs[1,1].legend()
 plt.show()

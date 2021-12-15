@@ -2,7 +2,7 @@ reaction_list
 -----------------------
 # Ionization
 e + Ar -> e + e + Ar+,field_table,C3 Ar Ionization 15.80 eV
-e + Ar+ + Ar -> Ar + Ar,k2_func,1e-25,cm
+e + Ar+ + Ar -> Ar + Ar,k2_func,1e-37
 -----------------------
 
 Mean energy (eV)

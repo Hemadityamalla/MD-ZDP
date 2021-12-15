@@ -35,7 +35,7 @@ program zeroDimPlasmaChem
     real(dp), allocatable :: field_table_fields(:)
     real(dp) :: init_specie_density(2)
     integer :: test_iterator
-    integer :: output_number = 50
+    integer :: output_number = 1
     !character(len=string_len) :: output_name
 
     print *, "Inside main prog:"
@@ -63,6 +63,7 @@ program zeroDimPlasmaChem
     print *, "Initial densities: ", odes%vars(i_1pos_ion), odes%vars(i_electron)
     ! Time integration loop here
     do while (time < end_time)
+      print *, "Error: ", exp(1.0e-16*2.4143212320551650E+25*time)-odes%vars(i_electron)
       ! Add functionality to compute the wall clock time 
       if (global_dt < dt_min) then
          print *, "dt(", global_dt, ") smaller than dt_min(", dt_min, ")"
@@ -78,12 +79,13 @@ program zeroDimPlasmaChem
          species_itree(n_gas_species+1:n_species), time_integrator)
 
       !print *, "Electron density: ", odes%vars(i_electron)
+      !print *, "Exact: ", exp(1.0e-16*2.4143212320551650E+25*time)
       !test_varnames = pack(odes%var_names, odes%var_matrix==1)
       !print *, "Varnames: ",pack(odes%vars, odes%var_matrix==1) 
       !print *, "Num actual vars: ", sum(odes%var_matrix)
       call dt_constraints(dt_array, odes)
-      print *, "dt array: ", dt_array
-      global_dt = min(dt_safety_factor*minval(dt_array), 2*dt_max)
+      !print *, "dt array: ", dt_array
+      !global_dt = min(dt_safety_factor*minval(dt_array), 2*dt_max)
       time = time + global_dt
       test_iterator = test_iterator + 1
 
@@ -380,10 +382,10 @@ program zeroDimPlasmaChem
     ne = o_s%vars(i_electron)
     E_vm = o_s%vars(4) !TODO:make this better
     Td = E_vm*SI_to_Townsend/gas_number_density
-    print *,"Td: ", Td
+    !print *,"Td: ", Td, gas_number_density
     mobility =  LT_get_col(td_tbl, td_mobility, Td)/gas_number_density
-    dt(dt_ix_drt) = UC_eps0/(UC_elem_charge*max(mobility*ne, eps))
-    !dt(dt_ix_drt) = 1e+19
+    !dt(dt_ix_drt) = UC_eps0/(UC_elem_charge*max(mobility*ne, eps))
+    dt(dt_ix_drt) = 1e+19
     !Computing the chemistry time
     ratio = minval((abs(o_s%vars(species_itree(n_gas_species+1:n_species))) &
       + dt_chem_nmin)/& 

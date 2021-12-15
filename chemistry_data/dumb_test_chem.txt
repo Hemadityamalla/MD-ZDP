@@ -3,7 +3,7 @@
 reaction_list
 -----------------------
 # Ionization
-e + X -> e + e + X+,exp_v1, 1.0 0.0 0.0
+X + e -> X+ + e + e ,exp_v1, 1.0e-16 0.0 0.0
 -----------------------
 
 Mean energy (eV)

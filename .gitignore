@@ -1,7 +1,8 @@
 
 *.o
-*.txt
 gmon.out
 *.mod
 .vscode
+*_var_names.txt
+*.h5
 zdPlasmaChem

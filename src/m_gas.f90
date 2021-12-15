@@ -1,4 +1,4 @@
-#include "../afivo/src/cpp_macros.h"
+#include "cpp_macros.h"
 !> Module that stores parameters related to the gas
 module m_gas
   use m_types
@@ -81,7 +81,7 @@ contains
     gas_number_density = 1e5_dp * gas_pressure / &
          (UC_boltzmann_const * gas_temperature)
     gas_inverse_number_density = 1/gas_number_density
-    print *, "Inside gas init, gas number density: ", gas_number_density
+    !print *, "Inside gas init, gas number density: ", gas_number_density
 
     call CFG_add(cfg, "gas%components", ["N2", "O2"], &
          "Gas component names", .true.)

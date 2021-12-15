@@ -2,20 +2,22 @@ program zeroDimPlasmaChem
     use m_config
     use m_chemistry
     use m_types
+    use m_output
     implicit none
 
     type(CFG_t) :: cfg 
     type(ode_sys) :: odes
     integer, parameter :: n_cell = 1
     integer, parameter :: dt_num_cond = 2
-    real(dp) :: dt_array(2)
+    real(dp) :: dt_array(1:2)
     integer, parameter :: dt_ix_chem = 1
     integer, parameter :: dt_ix_drt = 2
     real(dp), parameter :: dt_safety_factor = 0.9_dp
+    real(dp), parameter :: dt_chem_nmin = 1e11_dp
     real(dp) :: time, global_dt
     real(dp) :: end_time
     real(dp) :: dt_max = 1e-11_dp
-    real(dp) :: dt_min = 1e-14_dp
+    real(dp) :: dt_min = 1e-12_dp
     character(len=name_len) :: integrator = "heuns_method"
     integer :: time_integrator = -1
     integer, parameter :: n_integrators = 3
@@ -32,50 +34,69 @@ program zeroDimPlasmaChem
     real(dp), allocatable :: field_table_times(:)
     real(dp), allocatable :: field_table_fields(:)
     real(dp) :: init_specie_density(2)
-    character(len=string_len) :: output_name
+    integer :: test_iterator
+    integer :: output_number = 1
+    !character(len=string_len) :: output_name
 
-    print *, "Inside main prog"
+    print *, "Inside main prog:"
     call CFG_update_from_arguments(cfg)
     call init_modules(cfg, odes)
-    call CFG_add_get(cfg, "output%name", output_name, &
-      "Name of the output file")
+    
     print *, "Integration method to be used ", integrator !Debug line
     print *, "ODE system number of variables: ", odes%n_vars !Debug linr
-    print *, "ODE system variable names: ", odes%var_names(1:odes%n_vars) !Debug linr
+    !print *, "ODE system variable names: ", odes%var_names(1:odes%n_vars) !Debug linr
     print *, "Initial field value: ", field_amplitude
     print *, "First positive ion: ", odes%var_names(i_1pos_ion)
     print *, "N_gas_species: ", n_gas_species
     print *, "N_species: ", n_species
     print *, "Species list: ", species_list(n_gas_species+1:n_species)
     print *, "species_itree: ", species_itree(n_gas_species+1:n_species)
-    print *, "Index of electric field, electron: ", find_ode_var(odes, "electric_fld"), find_ode_var(odes, "e")
+    !print *, "Index of electric field, electron: ", find_ode_var(odes, "electric_fld"), find_ode_var(odes, "e")
     ! End debug lines
 
 
     time = 0.0_dp
+    test_iterator = 0
 
-    global_dt = minval(dt_array)
+    global_dt = 0.1_dp*maxval(dt_array)
     ! Setting the initial conditions
-    call init_cond_initialize(odes, cfg)
     print *, "Initial densities: ", odes%vars(i_1pos_ion), odes%vars(i_electron)
     ! Time integration loop here
     do while (time < end_time)
+      print *, "Error: ", exp(1.0e-16*2.4143212320551650E+25*time)-odes%vars(i_electron)
       ! Add functionality to compute the wall clock time 
+      if (global_dt < dt_min) then
+         print *, "dt(", global_dt, ") smaller than dt_min(", dt_min, ")"
+         error stop "dt too small"
 
-      print *, "Time: ", time
-      call output_HDF5_solution(odes, trim(output_name), time, i_electron)
+      endif
+
+      if (mod(test_iterator, output_number) == 0) then
+         print *, "Time: ", time
+         call output_HDF5_solution(odes, trim(output_name), time, test_iterator)
+      endif
       call ode_advance(odes, global_dt, &
          species_itree(n_gas_species+1:n_species), time_integrator)
 
-      print *, "Electron density: ", odes%vars(i_electron)
+      !print *, "Electron density: ", odes%vars(i_electron)
+      !print *, "Exact: ", exp(1.0e-16*2.4143212320551650E+25*time)
+      !test_varnames = pack(odes%var_names, odes%var_matrix==1)
+      !print *, "Varnames: ",pack(odes%vars, odes%var_matrix==1) 
+      !print *, "Num actual vars: ", sum(odes%var_matrix)
+      call dt_constraints(dt_array, odes)
+      !print *, "dt array: ", dt_array
+      !global_dt = min(dt_safety_factor*minval(dt_array), 2*dt_max)
       time = time + global_dt
+      test_iterator = test_iterator + 1
 
 
 
     end do
+    !Outputting the last value of the simulation
+    call output_HDF5_solution(odes, trim(output_name), time, test_iterator)
     
 
-    print *, "End of simulation"
+    print *, "End of simulation at t= ", time
 
     contains
 
@@ -83,28 +104,75 @@ program zeroDimPlasmaChem
         use m_table_data
         use m_transport_data
         use m_gas
+        use m_output
         implicit none
         type(CFG_t),intent(inout) :: cfg
         type(ode_sys),intent(inout) :: odes
         !Initialize the time steps here
 
+        print *, "Beginning init modules:", odes%n_vars
         !Initialize the tables used for some reaction rates
         call table_data_initialize(cfg)
         call transport_data_initialize(cfg)
         call gas_initialize(odes, cfg)
-        !Read the input reactions
-        call chemistry_initialize(odes, cfg)
+        call field_initialize(odes, cfg)
         !Initialize dt values and the type of time integrator to be used
         call dt_initialize(cfg)
+        !Read the input reactions
+        call chemistry_initialize(odes, cfg, & 
+         integration_advance_steps(time_integrator))
 
         call cfg_init(odes, cfg)
-        call field_initialize(odes, cfg)
-        ! Initializing the ode variables
-        allocate(odes%vars(odes%n_vars))
-        ! Initializing the ode variables rhs -- for the rates
-        allocate(odes%vars_rhs(odes%n_vars))
+        call init_variables(odes)
+        call init_cond_initialize(odes, cfg)
+        call output_initialize(cfg)
     
     end subroutine init_modules
+    
+    subroutine init_variables(odes)
+      use m_chemistry
+      use m_gas
+      implicit none
+      type(ode_sys),intent(inout) :: odes
+      integer :: i
+
+      ! Initializing the ode variables
+      allocate(odes%vars(1:odes%n_vars))
+      ! Initializing the ode variables rhs -- for the rates
+      allocate(odes%vars_rhs(1:odes%n_vars))
+      ! Initializing the output variable location array
+      allocate(odes%var_matrix(1:odes%n_vars))
+      !Initializing the above stuff to zero just to be clear
+      odes%vars(1:odes%n_vars) = 0.0_dp
+      odes%vars_rhs(1:odes%n_vars) = 0.0_dp
+      odes%var_matrix(1:odes%n_vars) = 0
+
+      !The standard gas properties (when they are constant)
+      do i=1,4
+         odes%var_matrix(i) = 1
+      end do
+      do i= 1, n_species - n_gas_species
+         odes%var_matrix(species_itree(n_gas_species+i)) = 1
+      end do
+      !print *,"Var matrix: ", odes%var_matrix(:)
+      
+
+    end subroutine init_variables
+
+
+    !subroutine print_var_vals(o_s)
+    !  implicit none
+    !  type(ode_sys),intent(in) :: o_s
+    !  integer, allocatable :: var_matrix(:)
+    !  integer :: n_vars
+    !  integer :: i
+    !  n_vars = o_s%n_vars
+    !  !allocate(var_matrix(n_vars))
+    !  var_matrix = o_s%var_matrix
+
+    !  
+    
+    !end subroutine print_var_vals
 
     subroutine dt_initialize(cfg)
         use m_config
@@ -132,7 +200,7 @@ program zeroDimPlasmaChem
            print *, "Time integrator: ", trim(integrator)
            error stop "Invalid time integrator"
         end select
-        dt_array = dt_max
+        dt_array = (/dt_max, dt_min/)
     
     end subroutine dt_initialize
 
@@ -151,7 +219,7 @@ program zeroDimPlasmaChem
 
       ! Set electron index
       i_electron = find_ode_var(odes, "e")
-      print *, "i_electron", i_electron
+      !print *, "i_electron", i_electron
       ix_electron = species_index("e")
       do n = n_gas_species+1, n_species
          if (species_charge(n) == 1) then
@@ -165,7 +233,6 @@ program zeroDimPlasmaChem
   
 
       !Used to initialize MANY other input conditions/etc. Afivo has stuff like Bcs, ion motion stuff, etc, which we dont have
-      call add_ode_var(odes, "electric_fld", ix=i_e_fld)
 
 
     
@@ -179,6 +246,7 @@ program zeroDimPlasmaChem
       type(CFG_t),intent(inout) ::  cfg
       character(len=string_len) :: field_table
 
+      call add_ode_var(odes, "electric_fld", ix=i_e_fld)
       field_table = undefined_str
       call CFG_add_get(cfg, "field_table", field_table, "File containing applied electric field (V/m) versus time")
       if (field_table /= undefined_str) then
@@ -196,6 +264,7 @@ program zeroDimPlasmaChem
     subroutine init_cond_initialize(odes,  cfg)
       use m_config
       use m_table_data
+      use m_gas
       implicit none
       type(ode_sys),intent(inout) :: odes
       type(CFG_t),intent(inout) ::  cfg
@@ -204,6 +273,8 @@ program zeroDimPlasmaChem
       odes%vars(i_electron), "Initial electron density")
       call CFG_add_get(cfg, "init_first_posIon_density", &
       odes%vars(i_1pos_ion), "Initial first positive ion density")
+
+      odes%vars(i_e_fld) = field_amplitude
     
     end subroutine init_cond_initialize
 
@@ -226,10 +297,13 @@ program zeroDimPlasmaChem
       !print *, "Species list: ", species_list(:)
       !print *, "Specie idx:", specie_idx
       !Obtain the field (E/N) in Townsend units
-      if (gas_constant_density) then
-         tmp = 1 / gas_number_density
-         field(n_cell) = SI_to_Townsend * tmp * field_amplitude
-      end if
+      tmp = 1 / gas_number_density
+      field(n_cell) = SI_to_Townsend * tmp * field_amplitude
+      
+      !if (gas_constant_density) then
+      !   tmp = 1 / gas_number_density
+      !   field(n_cell) = SI_to_Townsend * tmp * field_amplitude
+      !end if
 
       ! Get the specie densities for a given time step or intermediate time step
       dens(n_cell,n_gas_species+1:n_species) = ode_s%vars(specie_idx)
@@ -261,10 +335,10 @@ program zeroDimPlasmaChem
    
       select case (integrator_type)
       case(fwd_euler)
-         print *, "Inside ode_advance, fwd_euler, var_idx: ", var_idx
-         print *, "Print ode_rhs using var_idx", ode_s%vars_rhs(var_idx)
+         !print *, "Inside ode_advance, fwd_euler, var_idx: ", var_idx
+         !print *, "Print ode_rhs using var_idx", ode_s%vars_rhs(var_idx)
          call compute_rhs(ode_s, var_idx)
-         print *, "Print ode_rhs using var_idx after update", ode_s%vars_rhs(var_idx)
+         !print *, "Print ode_rhs using var_idx after update", ode_s%vars_rhs(var_idx)
          ode_s%vars(var_idx) = ode_s%vars(var_idx) + dt*ode_s%vars_rhs(var_idx)
          
       case(rk2)
@@ -287,6 +361,38 @@ program zeroDimPlasmaChem
     
     
     end subroutine ode_advance
+
+    subroutine dt_constraints(dt, o_s)
+      use m_chemistry
+      use m_transport_data
+      use m_units_constants
+      use m_table_data
+      use m_lookup_table
+      use m_gas
+      implicit none
+      type(ode_sys),intent(inout) :: o_s
+      real(dp),intent(inout) :: dt(2)
+      real(dp) ::  ne, E_vm
+      real(dp) :: mobility
+      real(dp), parameter :: eps = 1e-100_dp
+      real(dp) :: ratio = 0.0_dp
+      real(dp) :: Td
+
+    !Computing the dielectric relaxation time
+    ne = o_s%vars(i_electron)
+    E_vm = o_s%vars(4) !TODO:make this better
+    Td = E_vm*SI_to_Townsend/gas_number_density
+    !print *,"Td: ", Td, gas_number_density
+    mobility =  LT_get_col(td_tbl, td_mobility, Td)/gas_number_density
+    !dt(dt_ix_drt) = UC_eps0/(UC_elem_charge*max(mobility*ne, eps))
+    dt(dt_ix_drt) = 1e+19
+    !Computing the chemistry time
+    ratio = minval((abs(o_s%vars(species_itree(n_gas_species+1:n_species))) &
+      + dt_chem_nmin)/& 
+      max(abs(o_s%vars_rhs(species_itree(n_gas_species+1:n_species))),eps))
+
+    dt(dt_ix_chem)  = ratio    
+    end subroutine dt_constraints
 
     !Subroutine that outputs the simulation data as a .txt file
     subroutine output_solution(odes_s, filename, t, idx)
@@ -327,65 +433,5 @@ program zeroDimPlasmaChem
       close(my_unit)
     end subroutine output_solution
     
-    subroutine output_HDF5_solution(odes_s, filename, t, idx)
-      use m_chemistry
-      use m_types
-      use HDF5
-      implicit none
-      type(ode_sys), intent(in) :: odes_s
-      character(len=*), intent(in) :: filename
-      character(len=50), save :: fmt, fmt_header
-      character(len=50) :: test_fmt
-      integer :: my_unit, n, i, n_vars, error, space_rank
-      integer, intent(in) :: idx
-      real(dp), intent(in) :: t
-      logical, save :: first_time = .true.
-      
-      integer(HSIZE_T) :: data_dims(1)
-      integer(HID_T) :: file_id, dspace_id
-      integer(HID_T), allocatable :: dset_id(:)
-      integer :: max_rows = 5
-
-      
-
-      n_vars = odes_s%n_vars
-      allocate(dset_id(n_vars))
-      if (first_time) then
-         first_time = .false.
-
-         call h5open_f(error)
-
-         call h5fcreate_f(trim(filename), H5F_ACC_TRUNC_F, file_id, error)
-
-         space_rank = 1
-         data_dims(1) = max_rows
-
-         call h5screate_simple_f(space_rank, data_dims, dspace_id, error)
-         do i=1,n_vars
-                call h5dcreate_f(file_id, trim(odes_s%var_names(i)), H5T_NATIVE_DOUBLE, dspace_id, dset_id(i), error)
-                call h5dclose_f(dset_id(i), error)
-
-         end do
-
-         
-
-
-
-
-         call h5fclose_f(file_id, error)
-
-         call h5close_f(error)
-         
-
-      end if
-
-      !write(fmt, "A, I0, A"), 
-      !fmt = "(E16.8, E16.8)"
-      !open(newunit=my_unit, file=trim(filename), action="write", &
-      !   position="append")
-
-      !write(my_unit, fmt) t, odes_s%vars(idx)
-      !close(my_unit)
-    end subroutine output_HDF5_solution
 end program zeroDimPlasmaChem
 

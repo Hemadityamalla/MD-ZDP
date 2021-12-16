@@ -102,6 +102,15 @@ module m_chemistry
   !> Indicates a reaction of the form c1 * T**c2 * exp(-c3 / T)
   integer, parameter :: rate_analytic_k12 = 17
 
+  !> Indicates a reaction of the form TODO:ADDD
+  integer, parameter :: rate_analytic_k13 = 18
+
+  !> Indicates a reaction of the form TODO:ADDD
+  integer, parameter :: rate_analytic_k14 = 19
+
+  !> Indicates a reaction of the form TODO:ADDD
+  integer, parameter :: rate_analytic_k15 = 20
+
   !> Maximum number of species
   integer, parameter :: max_num_species      = 100
 
@@ -422,66 +431,76 @@ contains
 
   !> Compute reaction rates
   subroutine get_rates(fields, rates, n_cells)
-    use m_units_constants
-    use m_gas
-    use m_transport_data
-    integer, intent(in)   :: n_cells                     !< Number of cells
-    real(dp), intent(in)  :: fields(n_cells)             !< The field (in Td) in the cells
-    real(dp), intent(out) :: rates(n_cells, n_reactions) !< The reaction rates
-    integer               :: n
-    real(dp)              :: c0, c(rate_max_num_coeff)
-    real(dp)              :: Te(n_cells)                 !> Electron Temperature in Kelvin
+   use m_units_constants
+   use m_gas
+   use m_transport_data
+   integer, intent(in)   :: n_cells                     !< Number of cells
+   real(dp), intent(in)  :: fields(n_cells)             !< The field (in Td) in the cells
+   real(dp), intent(out) :: rates(n_cells, n_reactions) !< The reaction rates
+   integer               :: n
+   real(dp)              :: c0, c(rate_max_num_coeff)
+   real(dp)              :: Te(n_cells)                 !> Electron Temperature in Kelvin
 
 
-    do n = 1, n_reactions
-       ! A factor that the reaction rate is multiplied with, for example to
-       ! account for a constant gas number density and if the length unit is cm instead of m
-       c0 = reactions(n)%rate_factor
+   do n = 1, n_reactions
+      ! A factor that the reaction rate is multiplied with, for example to
+      ! account for a constant gas number density and if the length unit is cm instead of m
+      c0 = reactions(n)%rate_factor
 
-       ! Coefficients for the reaction rate
-       c(:) = reactions(n)%rate_data
+      ! Coefficients for the reaction rate
+      c(:) = reactions(n)%rate_data
 
-       select case (reactions(n)%rate_type)
-       case (rate_tabulated_field)
-          rates(:, n) = c0 * LT_get_col(chemtbl, &
-               reactions(n)%lookup_table_index, fields)
-       case (rate_analytic_constant)
-          rates(:, n) = c0 * c(1)
-       case (rate_analytic_linear)
-          rates(:, n) = c0 * c(1) * (fields - c(2))
-       case (rate_analytic_exp_v1)
-          rates(:, n) = c0 * c(1) * exp(-(c(2) / (c(3) + fields))**2)
-       case (rate_analytic_exp_v2)
-          rates(:, n) = c0 * c(1) * exp(-(fields/c(2))**2)
-       case (rate_analytic_k1)
-          Te = 2 * LT_get_col(td_tbl, td_energy_eV, fields) * 1.6e-19 / (3 * UC_boltzmann_const)  ! K
-          rates(:, n) = c0 * c(1) * (300 / Te)**c(2)
-       case (rate_analytic_k2)
-          rates(:, n) = c0 * c(1)
-       case (rate_analytic_k3)
-          Te = 2 * LT_get_col(td_tbl, td_energy_eV, fields) * 1.6e-19 / (3 * UC_boltzmann_const)  ! K
-          rates(:, n) = c0 * (c(1) * ((UC_boltzmann_const  * (1e19 / 1.6)) * Te + c(2))**2 - c(3)) * c(4)  ! We convert boltzmann_const from J / K to eV / K
-       case (rate_analytic_k4)
-          rates(:, n) = c0 * c(1) * (gas_temperature / 300)**c(2) * exp(-c(3) / gas_temperature)
-       case (rate_analytic_k5)
-          rates(:, n) = c0 * c(1) * exp(-c(2) / gas_temperature)
-       case (rate_analytic_k6)
-          rates(:, n) = c0 * c(1) * gas_temperature**c(2)
-       case (rate_analytic_k7)
-          rates(:, n) = c0 * c(1) * (gas_temperature / c(2))**c(3)
-       case (rate_analytic_k8)
-          rates(:, n) = c0 * c(1) * (300 / gas_temperature)**c(2)
-       case (rate_analytic_k9)
-          rates(:, n) = c0 * c(1) * exp(-c(2) * gas_temperature)
-       case (rate_analytic_k10)
-          rates(:, n) = c0 * 10**(c(1) + c(2) * (gas_temperature - 300))
-       case (rate_analytic_k11)
-          rates(:, n) = c0 * c(1) * (300 / gas_temperature)**c(2) * exp(-c(3) / gas_temperature)
-       case (rate_analytic_k12)
-          rates(:, n) = c0 * c(1) * gas_temperature**c(2) * exp(-c(3) / gas_temperature)
-      end select
-    end do
-  end subroutine get_rates
+      select case (reactions(n)%rate_type)
+      case (rate_tabulated_field)
+         rates(:, n) = c0 * LT_get_col(chemtbl, &
+              reactions(n)%lookup_table_index, fields)
+      case (rate_analytic_constant)
+         rates(:, n) = c0 * c(1)
+      case (rate_analytic_linear)
+         rates(:, n) = c0 * c(1) * (fields - c(2))
+      case (rate_analytic_exp_v1)
+         rates(:, n) = c0 * c(1) * exp(-(c(2) / (c(3) + fields))**2)
+      case (rate_analytic_exp_v2)
+         rates(:, n) = c0 * c(1) * exp(-(fields/c(2))**2)
+      case (rate_analytic_k1)
+         Te = 2 * LT_get_col(td_tbl, td_energy_eV, fields) * 1.6e-19 / (3 * UC_boltzmann_const)  ! K
+         rates(:, n) = c0 * c(1) * (300 / Te)**c(2)
+      case (rate_analytic_k2)
+         rates(:, n) = c0 * c(1)
+      case (rate_analytic_k3)
+         Te = 2 * LT_get_col(td_tbl, td_energy_eV, fields) * 1.6e-19 / (3 * UC_boltzmann_const)  ! K
+         rates(:, n) = c0 * (c(1) * ((UC_boltzmann_const  * (1e19 / 1.6)) * Te + c(2))**2 - c(3)) * c(4)  ! We convert boltzmann_const from J / K to eV / K
+      case (rate_analytic_k4)
+         rates(:, n) = c0 * c(1) * (gas_temperature / 300)**c(2) * exp(-c(3) / gas_temperature)
+      case (rate_analytic_k5)
+         rates(:, n) = c0 * c(1) * exp(-c(2) / gas_temperature)
+      case (rate_analytic_k6)
+         rates(:, n) = c0 * c(1) * gas_temperature**c(2)
+      case (rate_analytic_k7)
+         rates(:, n) = c0 * c(1) * (gas_temperature / c(2))**c(3)
+      case (rate_analytic_k8)
+         rates(:, n) = c0 * c(1) * (300 / gas_temperature)**c(2)
+      case (rate_analytic_k9)
+         rates(:, n) = c0 * c(1) * exp(-c(2) * gas_temperature)
+      case (rate_analytic_k10)
+         rates(:, n) = c0 * 10**(c(1) + c(2) * (gas_temperature - 300))
+      case (rate_analytic_k11)
+         rates(:, n) = c0 * c(1) * (300 / gas_temperature)**c(2) * exp(-c(3) / gas_temperature)
+      case (rate_analytic_k12)
+         rates(:, n) = c0 * c(1) * gas_temperature**c(2) * exp(-c(3) / gas_temperature)
+      case (rate_analytic_k13)
+         rates(:, n) = c0 * c(1) * exp(-(c(2) / (c(3) + fields))**c(4))
+      case (rate_analytic_k14)
+         rates(:, n) = c0 * c(1) * exp(-(fields / c(2))**c(3))
+      case (rate_analytic_k15)
+         ! Note that this reaction depends on Ti, ionic temperature, which according to Galimberti(1979),
+         ! Ti = T_gas + fields/c(3), with c(3) = 0.18 Td/Kelvin, UC_boltzmann_const is in J/Kelvin, 
+         ! c(2) is given in Joule in the input file
+         rates(:, n) = c0 * c(1) * exp(-(c(2) / (UC_boltzmann_const * (gas_temperature + fields/c(3))))**c(4))
+     end select
+   end do
+ end subroutine get_rates
+
 
   !> Compute derivatives due to chemical reactions
   subroutine get_derivatives(dens, rates, derivs, n_cells)
@@ -517,162 +536,244 @@ contains
 
   !> Read reactions from a file
   subroutine read_reactions(filename, read_success)
-    character(len=*), intent(in) :: filename
-    logical, intent(out)         :: read_success
-    character(len=string_len)    :: line
-    character(len=100)            :: data_value(max_num_reactions)
-    character(len=50)            :: reaction(max_num_reactions)
-    character(len=50)            :: how_to_get(max_num_reactions)
-    character(len=10)            :: length_unit(max_num_reactions)
-    type(reaction_t)             :: new_reaction
-    integer                      :: my_unit
-    integer, parameter           :: n_fields_max = 4
-    integer                      :: i0(n_fields_max), i1(n_fields_max)
-    integer                      :: n, n_found
+   character(len=*), intent(in) :: filename
+   logical, intent(out)         :: read_success
+   character(len=string_len)    :: line
+   integer, parameter           :: field_len    = 50
+   character(len=field_len)     :: data_value(max_num_reactions)
+   character(len=field_len)     :: reaction(max_num_reactions)
+   character(len=field_len)     :: how_to_get(max_num_reactions)
+   character(len=10)            :: length_unit(max_num_reactions)
+   type(reaction_t)             :: new_reaction
+   integer                      :: my_unit
+   integer, parameter           :: n_fields_max = 40
+   integer                      :: i0(n_fields_max), i1(n_fields_max)
+   integer                      :: n, i, k, n_found, lo, hi
 
-    open(newunit=my_unit, file=filename, action="read")
+   type group
+      character(len=name_len)               :: name
+      character(len=field_len), allocatable :: members(:)
+   end type group
 
-    n_reactions  = 0
-    read_success = .false.
+   integer, parameter :: max_groups = 10
+   integer            :: i_group, group_size
+   type(group)        :: groups(max_groups)
 
-    ! Find list of reactions
-    do
-       read(my_unit, "(A)", end=998) line
-       line = adjustl(line)
+   open(newunit=my_unit, file=filename, action="read")
 
-       if (line == "reaction_list") then
-          ! Read next line starting with at least 5 dashes
-          read(my_unit, "(A)") line
-          if (line(1:5) /= "-----") &
-               error stop "read_reactions: reaction_list not followed by -----"
-          exit
-       end if
-    end do
+   n_reactions  = 0
+   i_group      = 0
+   group_size   = 0
+   read_success = .false.
 
-    ! Start reading reactions
-    do
-       read(my_unit, "(A)", end=999) line
-       line = adjustl(line)
+   ! Find list of reactions
+   do
+      read(my_unit, "(A)", end=998) line
+      line = adjustl(line)
 
-       ! Ignore comments
-       if (line(1:1) == "#") cycle
+      if (line == "reaction_list") then
+         ! Read next line starting with at least 5 dashes
+         read(my_unit, "(A)") line
+         if (line(1:5) /= "-----") &
+              error stop "read_reactions: reaction_list not followed by -----"
+         exit
+      end if
+   end do
 
-       ! Exit when we read a line of dashes
-       if (line(1:5) == "-----") exit
+   ! Start reading reactions
+   do
+      read(my_unit, "(A)", end=999) line
+      line = adjustl(line)
 
-       call get_fields_string(line, ",", n_fields_max, n_found, i0, i1)
+      ! Ignore comments
+      if (line(1:1) == "#") cycle
 
-       if (n_found < 3 .or. n_found > n_fields_max) then
-          print *, trim(line)
-          error stop "Invalid chemistry syntax"
-       end if
+      ! Exit when we read a line of dashes
+      if (line(1:5) == "-----") exit
 
-       if (n_reactions >= max_num_reactions) &
-            error stop "Too many reactions, increase max_num_reactions"
+      ! Group syntax for multiple species
+      if (line(1:1) == "@") then
+         call get_fields_string(line, "=,", n_fields_max, n_found, i0, i1)
+         i_group = i_group + 1
 
-       n_reactions             = n_reactions + 1
-       reaction(n_reactions)   = line(i0(1):i1(1))
-       how_to_get(n_reactions) = line(i0(2):i1(2))
-       data_value(n_reactions) = line(i0(3):i1(3))
+         if (i_group > max_groups) error stop "Too many groups"
 
-       ! Fourth entry can hold a custom length unit, default is meter
-       if (n_found > 3) then
-          length_unit(n_reactions) = line(i0(4):i1(4))
-       else
-          length_unit(n_reactions) = "m"
-       end if
-    end do
+         if (i_group == 1) then
+            group_size = n_found - 1
+         else if (n_found - 1 /= group_size) then
+            print *, trim(line)
+            error stop "Groups for a reaction should have the same size"
+         end if
 
-    ! Close the file (so that we can re-open it for reading data)
-    close(my_unit)
+         groups(i_group)%name = line(i0(1):i1(1))
+         allocate(groups(i_group)%members(n_found - 1))
 
-    ! Now parse the reactions
-    do n = 1, n_reactions
+         do n = 2, n_found
+            groups(i_group)%members(n-1) = adjustl(line(i0(n):i1(n)))
+         end do
+         cycle
+      end if
+
+      if (i_group > 0) then
+         ! Handle groups
+         lo                   = n_reactions
+         hi                   = n_reactions+group_size-1
+         reaction(lo+1:hi)    = reaction(lo)
+         how_to_get(lo+1:hi)  = how_to_get(lo)
+         data_value(lo+1:hi)  = data_value(lo)
+         length_unit(lo+1:hi) = length_unit(lo)
+         n_reactions          = hi
+
+         do k = 1, group_size
+            do i = 1, i_group
+               n = lo + k - 1
+               reaction(n)   = string_replace(reaction(n), &
+                    groups(i)%name, groups(i)%members(k))
+               how_to_get(n) = string_replace(how_to_get(n), &
+                    groups(i)%name, groups(i)%members(k))
+               data_value(n) = string_replace(data_value(n), &
+                    groups(i)%name, groups(i)%members(k))
+            end do
+         end do
+
+         ! Check if there are duplicate reactions
+         do n = lo, hi
+            if (count(reaction(lo:hi) == reaction(n)) > 1 .and. &
+                 count(data_value(lo:hi) == data_value(n)) > 1) then
+               do k = lo, hi
+                  print *, trim(reaction(k)), ",", data_value(k)
+               end do
+               error stop "Groups lead to duplicate reactions"
+            end if
+         end do
+
+         i_group    = 0
+         group_size = 0
+      end if
+
+      call get_fields_string(line, ",", n_fields_max, n_found, i0, i1)
+
+      if (n_found < 3 .or. n_found > 4) then
+         print *, trim(line)
+         error stop "Invalid chemistry syntax"
+      end if
+
+      if (n_reactions >= max_num_reactions) &
+           error stop "Too many reactions, increase max_num_reactions"
+
+      n_reactions             = n_reactions + 1
+      reaction(n_reactions)   = line(i0(1):i1(1))
+      how_to_get(n_reactions) = line(i0(2):i1(2))
+      data_value(n_reactions) = line(i0(3):i1(3))
+
+      ! Fourth entry can hold a custom length unit, default is meter
+      if (n_found > 3) then
+         length_unit(n_reactions) = line(i0(4):i1(4))
+      else
+         length_unit(n_reactions) = "m"
+      end if
+   end do
+
+   ! Close the file (so that we can re-open it for reading data)
+   close(my_unit)
+
+   ! Now parse the reactions
+   do n = 1, n_reactions
       call parse_reaction(trim(reaction(n)), new_reaction)
       new_reaction%description = trim(reaction(n))
 
       select case (how_to_get(n))
-         case ("field_table")
-            ! Reaction data should be present in the same file
-            call read_reaction_table(filename, &
-               trim(data_value(n)), new_reaction)
-       case ("constant")
-          new_reaction%rate_type = rate_analytic_constant
-          read(data_value(n), *) new_reaction%rate_data(1)
-       case ("linear")
-          new_reaction%rate_type = rate_analytic_linear
-          read(data_value(n), *) new_reaction%rate_data(1:2)
-       case ("exp_v1")
-          new_reaction%rate_type = rate_analytic_exp_v1
-          read(data_value(n), *) new_reaction%rate_data(1:3)
-       case ("exp_v2")
-          new_reaction%rate_type = rate_analytic_exp_v2
-          read(data_value(n), *) new_reaction%rate_data(1:2)
-       case ("k1_func")
-          new_reaction%rate_type = rate_analytic_k1
-          read(data_value(n), *) new_reaction%rate_data(1:2)
-       case ("k2_func")
-          new_reaction%rate_type = rate_analytic_k2
-          read(data_value(n), *) new_reaction%rate_data(1)
-       case ("k3_func")
-          new_reaction%rate_type = rate_analytic_k3
-          read(data_value(n), *) new_reaction%rate_data(1:4)
-       case ("k4_func")
-          new_reaction%rate_type = rate_analytic_k4
-          read(data_value(n), *) new_reaction%rate_data(1:3)
-       case ("k5_func")
-          new_reaction%rate_type = rate_analytic_k5
-          read(data_value(n), *) new_reaction%rate_data(1:2)
-       case ("k6_func")
-          new_reaction%rate_type = rate_analytic_k6
-          read(data_value(n), *) new_reaction%rate_data(1:2)
-       case ("k7_func")
-          new_reaction%rate_type = rate_analytic_k7
-          read(data_value(n), *) new_reaction%rate_data(1:3)
-       case ("k8_func")
-          new_reaction%rate_type = rate_analytic_k8
-          read(data_value(n), *) new_reaction%rate_data(1:2)
-       case ("k9_func")
-          new_reaction%rate_type = rate_analytic_k9
-          read(data_value(n), *) new_reaction%rate_data(1:2)
-       case ("k10_func")
-          new_reaction%rate_type = rate_analytic_k10
-          read(data_value(n), *) new_reaction%rate_data(1:2)
-       case ("k11_func")
-          new_reaction%rate_type = rate_analytic_k11
-          read(data_value(n), *) new_reaction%rate_data(1:3)
-       case ("k12_func")
-          new_reaction%rate_type = rate_analytic_k12
-          read(data_value(n), *) new_reaction%rate_data(1:3)
+      case ("field_table")
+         ! Reaction data should be present in the same file
+         call read_reaction_table(filename, &
+              trim(data_value(n)), new_reaction)
+      case ("constant")
+         new_reaction%rate_type = rate_analytic_constant
+         read(data_value(n), *) new_reaction%rate_data(1)
+      case ("linear")
+         new_reaction%rate_type = rate_analytic_linear
+         read(data_value(n), *) new_reaction%rate_data(1:2)
+      case ("exp_v1")
+         new_reaction%rate_type = rate_analytic_exp_v1
+         read(data_value(n), *) new_reaction%rate_data(1:3)
+      case ("exp_v2")
+         new_reaction%rate_type = rate_analytic_exp_v2
+         read(data_value(n), *) new_reaction%rate_data(1:2)
+      case ("k1_func")
+         new_reaction%rate_type = rate_analytic_k1
+         read(data_value(n), *) new_reaction%rate_data(1:2)
+      case ("k2_func")
+         new_reaction%rate_type = rate_analytic_k2
+         read(data_value(n), *) new_reaction%rate_data(1)
+      case ("k3_func")
+         new_reaction%rate_type = rate_analytic_k3
+         read(data_value(n), *) new_reaction%rate_data(1:4)
+      case ("k4_func")
+         new_reaction%rate_type = rate_analytic_k4
+         read(data_value(n), *) new_reaction%rate_data(1:3)
+      case ("k5_func")
+         new_reaction%rate_type = rate_analytic_k5
+         read(data_value(n), *) new_reaction%rate_data(1:2)
+      case ("k6_func")
+         new_reaction%rate_type = rate_analytic_k6
+         read(data_value(n), *) new_reaction%rate_data(1:2)
+      case ("k7_func")
+         new_reaction%rate_type = rate_analytic_k7
+         read(data_value(n), *) new_reaction%rate_data(1:3)
+      case ("k8_func")
+         new_reaction%rate_type = rate_analytic_k8
+         read(data_value(n), *) new_reaction%rate_data(1:2)
+      case ("k9_func")
+         new_reaction%rate_type = rate_analytic_k9
+         read(data_value(n), *) new_reaction%rate_data(1:2)
+      case ("k10_func")
+         new_reaction%rate_type = rate_analytic_k10
+         read(data_value(n), *) new_reaction%rate_data(1:2)
+      case ("k11_func")
+         new_reaction%rate_type = rate_analytic_k11
+         read(data_value(n), *) new_reaction%rate_data(1:3)
+      case ("k12_func")
+         new_reaction%rate_type = rate_analytic_k12
+         read(data_value(n), *) new_reaction%rate_data(1:3)
+      case ("k13_func")
+         new_reaction%rate_type = rate_analytic_k13
+         read(data_value(n), *) new_reaction%rate_data(1:4)
+      case ("k14_func")
+         new_reaction%rate_type = rate_analytic_k14
+         read(data_value(n), *) new_reaction%rate_data(1:3)
+      case ("k15_func")
+         new_reaction%rate_type = rate_analytic_k15
+         read(data_value(n), *) new_reaction%rate_data(1:4)
       case default
-          print *, "Unknown rate type: ", trim(how_to_get(n))
-          print *, "For reaction:      ", trim(reaction(n))
-          print *, "In file:           ", trim(filename)
-          error stop
-       end select
+         print *, "Unknown rate type: ", trim(how_to_get(n))
+         print *, "For reaction:      ", trim(reaction(n))
+         print *, "In file:           ", trim(filename)
+         error stop
+      end select
 
-       ! Correct for length unit in the rate function (e.g. [k] = cm3/s)
-       select case (length_unit(n))
-       case ("m")
-          continue
-       case ("cm")
-          ! 1 cm^3 = 1e-6 m^3
-          new_reaction%rate_factor = new_reaction%rate_factor * &
-               1e-6_dp**(new_reaction%n_species_in-1)
-       case default
-          print *, "For reaction: ", trim(reaction(n))
-          print *, "Invalid length unit: ", trim(length_unit(n))
-          error stop
-       end select
+      ! Correct for length unit in the rate function (e.g. [k] = cm3/s)
+      select case (length_unit(n))
+      case ("m")
+         continue
+      case ("cm")
+         ! 1 cm^3 = 1e-6 m^3
+         new_reaction%rate_factor = new_reaction%rate_factor * &
+              1e-6_dp**(new_reaction%n_species_in-1)
+      case default
+         print *, "For reaction: ", trim(reaction(n))
+         print *, "Invalid length unit: ", trim(length_unit(n))
+         error stop
+      end select
 
-       reactions(n) = new_reaction
-    end do
+      reactions(n) = new_reaction
+   end do
 
-    if (n_reactions > 0) read_success = .true.
+   if (n_reactions > 0) read_success = .true.
 998 return
 
 999 error stop "read_reactions: no closing dashes for reaction list"
-  end subroutine read_reactions
+ end subroutine read_reactions
+
 
   !> Read a reaction table
   subroutine read_reaction_table(filename, dataname, rdata)
@@ -835,6 +936,33 @@ contains
     end do
 
   end subroutine get_fields_string
+
+  !> Replace text in string, inspired by
+  !> http://fortranwiki.org/fortran/show/String_Functions
+  pure function string_replace(string, text, replacement) result(outs)
+    character(len=*), intent(in)  :: string
+    character(len=*), intent(in)  :: text
+    character(len=*), intent(in)  :: replacement
+    character(len=:), allocatable :: outs
+    integer, parameter :: buffer_space = 256
+    character(len=(len(string)+buffer_space)) :: buffer
+    integer                       :: i, nt, nr, len_outs
+
+    buffer = string
+    nt = len_trim(text)
+    nr = len_trim(replacement)
+
+    do
+       i = index(buffer, text(:nt))
+       if (i == 0) exit
+       buffer = buffer(:i-1) // replacement(:nr) // trim(buffer(i+nt:))
+    end do
+
+    len_outs = len_trim(buffer)
+    allocate(character(len=len_outs) :: outs)
+    outs = buffer(1:len_outs)
+  end function string_replace
+
 
   !> An inefficient routine to replace *^+- characters in a string
   subroutine to_simple_ascii(text, simple, charge)

@@ -79,6 +79,7 @@ program zeroDimPlasmaChem
          print *, "Time: ", time
          call output_HDF5_solution(odes, trim(output_name), time, test_iterator)
       endif
+      call get_field(odes%vars(i_e_fld), time)
       call ode_advance(odes, global_dt, &
          species_itree(n_gas_species+1:n_species), time_integrator)
 
@@ -91,7 +92,7 @@ program zeroDimPlasmaChem
       !print *, "Num actual vars: ", sum(odes%var_matrix)
       call dt_constraints(dt_array, odes)
       !print *, "dt array: ", dt_array
-      !global_dt = min(dt_safety_factor*minval(dt_array), 2*dt_max)
+      global_dt = min(dt_safety_factor*minval(dt_array), dt_max)
       time = time + global_dt
       test_iterator = test_iterator + 1
 
@@ -250,11 +251,13 @@ program zeroDimPlasmaChem
       implicit none
       type(ode_sys),intent(inout) :: odes
       type(CFG_t),intent(inout) ::  cfg
+      logical :: time_varying
       character(len=string_len) :: field_table
 
       call add_ode_var(odes, "electric_fld", ix=i_e_fld)
       field_table = undefined_str
-      call CFG_add_get(cfg, "field_table", field_table, "File containing applied electric field (V/m) versus time")
+      call CFG_add_get(cfg, "field_table", field_table, & 
+         "File containing applied electric field (V/m) versus time")
       if (field_table /= undefined_str) then
          field_table_use = .true.
          call table_from_file(field_table, "field_vs_time", &
@@ -266,6 +269,25 @@ program zeroDimPlasmaChem
       end if
     
     end subroutine field_initialize
+
+    subroutine get_field(field_val,  t)
+      implicit none
+      real(dp), intent(inout) :: field_val 
+      real(dp), intent(in) :: t 
+      real(dp) :: trise = 3.0e-9
+      real(dp) :: tfall = 3.0e-9
+      real(dp) :: tinter = 50e-9
+      real(dp) :: tconst = 5e-9
+      if (t <= (trise)) then
+         field_val = field_amplitude*(t/trise)
+      else if (t <= (trise + tconst)) then
+         field_val = field_amplitude
+      else if (t <= (trise+tfall+tconst)) then
+         field_val = field_amplitude*(1 - (t - (trise+tconst))/tfall)
+      else if (t <= (trise+tfall+tconst+tinter)) then
+         field_val = 0.0_dp
+      end if
+    end subroutine get_field
 
     subroutine init_cond_initialize(odes,  cfg)
       use m_config
@@ -330,7 +352,7 @@ program zeroDimPlasmaChem
 
       !Initializing the field amplitude.
       !TODO: This will change if a field table is supplied
-      odes%vars(i_e_fld) = field_amplitude
+      call get_field(odes%vars(i_e_fld), 0.0_dp)
     
     end subroutine init_cond_initialize
 
@@ -354,7 +376,7 @@ program zeroDimPlasmaChem
       !print *, "Specie idx:", specie_idx
       !Obtain the field (E/N) in Townsend units
       tmp = 1 / gas_number_density
-      field(n_cell) = SI_to_Townsend * tmp * field_amplitude
+      field(n_cell) = SI_to_Townsend * tmp * ode_s%vars(i_e_fld)
       
       !if (gas_constant_density) then
       !   tmp = 1 / gas_number_density
@@ -365,7 +387,7 @@ program zeroDimPlasmaChem
       dens(n_cell,n_gas_species+1:n_species) = ode_s%vars(specie_idx)
 
       call get_rates(field, rates, n_cell)
-      print *, "Rates: ", rates
+      !print *, "Rates: ", rates
 
       call get_derivatives(dens, rates, derivs, n_cell)
       !print *, "Derivatives: ", derivs

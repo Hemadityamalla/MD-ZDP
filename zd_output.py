@@ -53,14 +53,14 @@ axs[0,1].plot(t_steps, [x[3] for x in large_array], label=fi_vars[3])
 axs[0,1].legend()
 #Third plot has all the species stuff
 scaling = 1e-6
-cmap = plt.cm.get_cmap("gist_rainbow")
+cmap = plt.cm.get_cmap("tab20")
 axs[1,1].set_title("Specie densities")
 for i in range(4,var_end):
     c = cmap(float(i)/var_end)
     var_vals = np.array([x[i] for x in large_array])
     axs[1,1].plot(t_steps, var_vals*scaling, color=c, label=fi_vars[i])
 axs[1,1].set_yscale("log")
-axs[1,1].set_ylim([1e0, 1e20])
+axs[1,1].set_ylim([1e0, 10*np.max(var_vals)])
 axs[1,1].set_ylabel("density*"+str(scaling))
 axs[1,1].legend()
 plt.show()

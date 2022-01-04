@@ -31,13 +31,14 @@ program zeroDimPlasmaChem
     integer :: ix_electron = -1
     integer :: i_e_fld = -1
     logical :: field_table_use
+    logical :: field_constant
     real(dp) ::  field_amplitude
     real(dp), allocatable :: field_table_times(:)
     real(dp), allocatable :: field_table_fields(:)
-    real(dp), parameter :: lorge_num = 1e50_dp
+    real(dp), parameter :: lorge_num = 1e100_dp
     real(dp) :: init_specie_density(2)
     integer :: test_iterator
-    integer :: output_number = 1
+    integer :: output_number = 10
     !character(len=string_len) :: output_name
 
     print *, "Inside main prog:"
@@ -79,7 +80,7 @@ program zeroDimPlasmaChem
          print *, "Time: ", time
          call output_HDF5_solution(odes, trim(output_name), time, test_iterator)
       endif
-      call get_field(odes%vars(i_e_fld), time)
+      call get_field(odes%vars(i_e_fld), time, field_constant)
       call ode_advance(odes, global_dt, &
          species_itree(n_gas_species+1:n_species), time_integrator)
 
@@ -266,26 +267,39 @@ program zeroDimPlasmaChem
          field_table_use = .false.
          call CFG_add_get(cfg, "field_amplitude", field_amplitude, &
          "The initial applied electric field(V/m)")
+         call CFG_add_get(cfg, "field_constant", field_constant, &
+         "Whether the applied field is consant or a pulse")
       end if
     
     end subroutine field_initialize
 
-    subroutine get_field(field_val,  t)
+    subroutine get_field(field_val,  sim_time, constant)
       implicit none
       real(dp), intent(inout) :: field_val 
-      real(dp), intent(in) :: t 
+      real(dp), intent(in) :: sim_time 
+      logical, intent(in) :: constant
       real(dp) :: trise = 3.0e-9
-      real(dp) :: tfall = 3.0e-9
+      real(dp) :: tfall = 6.0e-9
       real(dp) :: tinter = 50e-9
-      real(dp) :: tconst = 5e-9
-      if (t <= (trise)) then
-         field_val = field_amplitude*(t/trise)
-      else if (t <= (trise + tconst)) then
+      real(dp) :: tconst = 8e-9
+      real(dp) :: t_block, t_period, t 
+      if (constant) then
          field_val = field_amplitude
-      else if (t <= (trise+tfall+tconst)) then
-         field_val = field_amplitude*(1 - (t - (trise+tconst))/tfall)
-      else if (t <= (trise+tfall+tconst+tinter)) then
-         field_val = 0.0_dp
+      else
+
+         t_block = trise+tconst+tfall
+         t_period = t_block + tinter
+         t = modulo(sim_time, t_period)
+         if (t <= (trise)) then
+            field_val = field_amplitude*(t/trise)
+         else if (t <= (trise + tconst)) then
+            field_val = field_amplitude
+         else if (t <= (trise+tfall+tconst)) then
+            field_val = field_amplitude*(1 - (t - (trise+tconst))/tfall)
+         else if (t <= (trise+tfall+tconst+tinter)) then
+            field_val = 0.0_dp
+            !field_val = field_amplitude/1e3_dp
+         end if
       end if
     end subroutine get_field
 
@@ -352,7 +366,7 @@ program zeroDimPlasmaChem
 
       !Initializing the field amplitude.
       !TODO: This will change if a field table is supplied
-      call get_field(odes%vars(i_e_fld), 0.0_dp)
+      call get_field(odes%vars(i_e_fld), 0.0_dp, field_constant)
     
     end subroutine init_cond_initialize
 

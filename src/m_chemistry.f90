@@ -654,7 +654,7 @@ contains
       call get_fields_string(line, ",", n_fields_max, n_found, i0, i1)
 
       if (n_found < 3 .or. n_found > 4) then
-         print *, trim(line)
+         print *, "Error line:", trim(line), n_reactions
          error stop "Invalid chemistry syntax"
       end if
 

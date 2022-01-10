@@ -280,7 +280,7 @@ program zeroDimPlasmaChem
       logical, intent(in) :: constant
       real(dp) :: trise = 3.0e-9
       real(dp) :: tfall = 6.0e-9
-      real(dp) :: tinter = 50e-9
+      real(dp) :: tinter = 100e-9
       real(dp) :: tconst = 8e-9
       real(dp) :: t_block, t_period, t 
       if (constant) then

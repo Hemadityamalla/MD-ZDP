@@ -38,7 +38,7 @@ program zeroDimPlasmaChem
     real(dp), parameter :: lorge_num = 1e100_dp
     real(dp) :: init_specie_density(2)
     integer :: test_iterator
-    integer :: output_number = 10
+    integer :: output_number = 50
     !character(len=string_len) :: output_name
 
     print *, "Inside main prog:"
@@ -150,7 +150,7 @@ program zeroDimPlasmaChem
       allocate(odes%vars_rhs(1:odes%n_vars))
       ! Initializing the output variable location array
       allocate(odes%var_matrix(1:odes%n_vars))
-      !Initializing the above stuff to zero just to be clear
+      !Initializing the above stuff to zero before the start of the simulation
       odes%vars(1:odes%n_vars) = 0.0_dp
       odes%vars_rhs(1:odes%n_vars) = 0.0_dp
       odes%var_matrix(1:odes%n_vars) = 0
@@ -159,6 +159,8 @@ program zeroDimPlasmaChem
       do i=1,4
          odes%var_matrix(i) = 1
       end do
+      ! Setting the variable matrix index to 1, to distinguish between
+      ! time integration copies
       do i= 1, n_species - n_gas_species
          odes%var_matrix(species_itree(n_gas_species+i)) = 1
       end do
@@ -363,9 +365,13 @@ program zeroDimPlasmaChem
 
       end if
 
+      ! Setting the gas properties here, can be moved to other modules too
+      odes%vars(i_gas_dens) = gas_number_density
+      odes%vars(i_gas_pres) = gas_pressure
+      odes%vars(i_gas_temp) = gas_temperature
+
 
       !Initializing the field amplitude.
-      !TODO: This will change if a field table is supplied
       call get_field(odes%vars(i_e_fld), 0.0_dp, field_constant)
     
     end subroutine init_cond_initialize

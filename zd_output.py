@@ -14,28 +14,34 @@ args = pr.parse_args()
 fileName = args.data_file
 #Read the h5 file
 fi = h5py.File(fileName+".h5", "r")
-#Read the variable names file
-fi_vars = open(fileName+"_var_names.txt").read().rstrip().split("\n")
+#Read the file containing variable names, reaction names, and time steps
+fi_vars = open(fileName+"_var_names.txt").read().rstrip().split(23*"-")
 
 #Obtain the list of databases
 timeGroup_name = list(fi.keys())[0]
-time_dbs_names = list(fi.get(timeGroup_name))
-timeGroup = fi.get(timeGroup_name)
-time_dbs = list(timeGroup.items())
-#Extract the values from the database
-large_array = [x[1][...] for x in time_dbs]
+rateGroup_name, specieGroup_name = list(fi.get(timeGroup_name))
+time_dbs_names = list(fi.get(timeGroup_name+"/"+rateGroup_name))
+#Extract the specie densities data
+specieGroup = fi.get(timeGroup_name+"/"+specieGroup_name)
+time_dbs = list(specieGroup.items())
+specie_array = [x[1][...] for x in time_dbs]
+#Extracting the rates data
+rateGroup = fi.get(timeGroup_name+"/"+rateGroup_name)
+time_dbs = list(rateGroup.items())
+rate_array = [x[1][...] for x in time_dbs]
 
 
-# Obtaining the timesteps
-tstart = 0
-var_end = 0
-for i,val in enumerate(fi_vars):
-    if val.startswith("----"):
-        var_end = i
-        tstart = i+1
-        break
-t_step = fi_vars[tstart:]
-t_steps = [float(x.lstrip()) for x in t_step]
+#Obtaining the variable names
+var_names = fi_vars[0].split("\n")
+var_end = len(var_names)-1
+#Obtaining and cleaning the reaction names
+reac_names = [x.strip() for x in fi_vars[1].split("\n")]
+reac_names.remove("")
+reac_names.remove("")
+#Obtaining and cleaning the timesteps
+t_steps = [x.strip() for x in fi_vars[2].split("\n")]
+t_steps.remove("")
+t_steps = list(map(float, t_steps))
 
 
 
@@ -45,14 +51,14 @@ fig, axs = plt.subplots(2,1)
 #First plot has the gas properties
 axs[0].set_title("Gas Properties")
 for i in range(3):
-    var_vals = np.array([x[i] for x in large_array])
-    axs[0].plot(t_steps,var_vals, label=fi_vars[i])
+    var_vals = np.array([x[i] for x in specie_array])
+    axs[0].plot(t_steps,var_vals, label=var_names[i])
 axs[0].legend()
 #Second plot has the electric field
 axs[1].set_title("Electric field")
-axs[1].plot(t_steps, [x[3] for x in large_array], label=fi_vars[3])
+axs[1].plot(t_steps, [x[3] for x in specie_array], label=var_names[3])
 axs[1].legend()
-#Third plot has all the species stuff
+#Third plots have all the species stuff
 scaling = 1e-6
 cmap = plt.cm.get_cmap("tab20")
 #Obtain the number of chemical species to generate plots
@@ -64,18 +70,28 @@ n_spec_plots = int(n_spec/spec_per_plot) + 1
 #i_plot = 0
 for i_specie in range(4,var_end):
     #c = cmap(float(i_specie)/var_end)
-    var_vals = np.array([x[i_specie] for x in large_array])
+    var_vals = np.array([x[i_specie] for x in specie_array])
     i_plot = int((i_specie-4)/spec_per_plot)
     plt.figure(i_plot+2)
     #plt.plot(t_steps, var_vals*scaling, color=c,  
     #    label=fi_vars[i_specie])
-    plt.plot(t_steps, var_vals*scaling,label=fi_vars[i_specie])
+    plt.plot(t_steps, var_vals*scaling,label=var_names[i_specie])
 
     plt.legend()
     
 
 
+
+#Plotting the reaction rates
+reac_per_plot = 6
+n_reac_plots = int(len(reac_names)/reac_per_plot) + 1
+for i_reac in range(0, len(reac_names)):
+    var_vals = np.array([x[i_reac] for x in rate_array])
+    i_reac_plot = int(i_reac/reac_per_plot)
+    plt.figure(i_reac_plot+n_spec_plots)
+    plt.plot(t_steps, var_vals*scaling, label=reac_names[i_reac])
+    plt.legend()
+
 plt.legend()
 plt.show()
-
 fi.close()

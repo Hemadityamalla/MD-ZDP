@@ -39,6 +39,7 @@ program zeroDimPlasmaChem
     real(dp) :: init_specie_density(2)
     integer :: test_iterator
     integer :: output_number = 50
+    real(dp), allocatable :: reaction_rates(:,:)
     !character(len=string_len) :: output_name
 
     print *, "Inside main prog:"
@@ -60,6 +61,7 @@ program zeroDimPlasmaChem
 
     time = 0.0_dp
     test_iterator = 0
+    allocate(reaction_rates(n_cell, n_reactions))
 
     global_dt = 0.1_dp*maxval(dt_array)
     ! Setting the initial conditions
@@ -78,7 +80,7 @@ program zeroDimPlasmaChem
 
       if (mod(test_iterator, output_number) == 0) then
          print *, "Time: ", time
-         call output_HDF5_solution(odes, trim(output_name), time, test_iterator)
+         call output_HDF5_solution(odes, reaction_rates, trim(output_name), time, test_iterator)
       endif
       call get_field(odes%vars(i_e_fld), time, field_constant)
       call ode_advance(odes, global_dt, &
@@ -101,7 +103,7 @@ program zeroDimPlasmaChem
 
     end do
     !Outputting the last value of the simulation
-    call output_HDF5_solution(odes, trim(output_name), time, test_iterator)
+    call output_HDF5_solution(odes, reaction_rates, trim(output_name), time, test_iterator)
     
 
     print *, "End of simulation at t= ", time
@@ -385,7 +387,7 @@ program zeroDimPlasmaChem
       implicit none
       type(ode_sys),intent(inout) :: ode_s
       integer, intent(in) :: specie_idx(:)
-      real(dp)                   :: rates(n_cell,n_reactions)
+      !real(dp)                   :: rates(n_cell,n_reactions)
       real(dp)                   :: derivs(n_cell,1:n_species)
       real(dp)                   :: dens(n_cell,n_species)
       real(dp)                   :: field(n_cell), tmp
@@ -406,10 +408,11 @@ program zeroDimPlasmaChem
       ! Get the specie densities for a given time step or intermediate time step
       dens(n_cell,n_gas_species+1:n_species) = ode_s%vars(specie_idx)
 
-      call get_rates(field, rates, n_cell)
+      !call get_rates(field, rates, n_cell)
+      call get_rates(field, reaction_rates, n_cell)
       !print *, "Rates: ", rates
 
-      call get_derivatives(dens, rates, derivs, n_cell)
+      call get_derivatives(dens, reaction_rates, derivs, n_cell)
       !print *, "Derivatives: ", derivs
       !print *, "Derivatives specie idx: ", derivs(1, specie_idx)
 

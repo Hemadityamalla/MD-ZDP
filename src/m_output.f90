@@ -20,7 +20,8 @@ contains
 
     type(CFG_t), intent(inout) :: cfg
     integer :: error
-    integer(HID_T) :: file_id, group_id1, group_id2
+    integer(HID_T) :: file_id
+    integer(HID_T):: group_id1, group_id2, group_id3
     character(len=string_len) :: outname
 
     call CFG_add_get(cfg, "output%name", outname, &
@@ -32,6 +33,10 @@ contains
     call h5fcreate_f(trim(outname) // ".h5", H5F_ACC_TRUNC_F, file_id, error)
 
     call h5gcreate_f(file_id, "times", group_id1, error)
+    call h5gcreate_f(file_id, "/times/species", group_id2, error)
+    call h5gclose_f(group_id2, error)
+    call h5gcreate_f(file_id, "/times/rates", group_id3, error)
+    call h5gclose_f(group_id3, error)
     call h5gclose_f(group_id1, error)
 
     !call h5gcreate_f(file_id, "tsteps", group_id2, error)
@@ -43,7 +48,7 @@ contains
 
   end subroutine output_initialize
 
-  subroutine output_HDF5_solution(odes_s, filename, t, iter)
+  subroutine output_HDF5_solution(odes_s, reaction_r, filename, t, iter)
      use m_chemistry
      use m_types
      use HDF5
@@ -51,6 +56,7 @@ contains
      type(ode_sys), intent(in) :: odes_s
      character(len=*), intent(in) :: filename
      real(dp), intent(in) :: t
+     real(dp), intent(in) :: reaction_r(1, n_reactions)
      integer, intent(in) :: iter 
      !character(len=50), save :: fmt, fmt_header
      !character(len=50) :: test_fmt
@@ -61,9 +67,13 @@ contains
      
      integer(HSIZE_T) :: data_dims(1)
      integer(HID_T) :: file_id, dspace_id, dset_id
-     integer(HID_T) :: grp_time_id
+     integer(HID_T) :: grp_time_id, specie_time_id
      character(len=name_len) :: dset_name
      !integer(HID_T), allocatable :: dset_id(:)
+     ! Variable declaration for reaction rates
+     integer(HID_T) :: grp_time_rate_id, rate_time_id
+     
+
 
      
 
@@ -83,18 +93,29 @@ contains
      call h5open_f(error)
      call h5fopen_f(trim(filename) // ".h5", H5F_ACC_RDWR_F, file_id, error)
      call h5gopen_f(file_id, "/times", grp_time_id, error)
+
+     call h5gopen_f(file_id, "/times/species", specie_time_id, error)
      data_dims = n_vars !We need to do this for HDF5 for integer type conversion
      call h5screate_simple_f(1, data_dims, dspace_id, error)
-     call h5dcreate_f(grp_time_id, trim(dset_name), H5T_NATIVE_DOUBLE, &
+     call h5dcreate_f(specie_time_id, trim(dset_name), H5T_NATIVE_DOUBLE, &
         dspace_id, dset_id, error)
-     
      call h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, &
       pack(odes_s%vars, odes_s%var_matrix==1), data_dims, error)
-
-
-
      call h5sclose_f(dspace_id, error)
      call h5dclose_f(dset_id, error)
+     call h5gclose_f(specie_time_id, error)
+
+     call h5gopen_f(file_id, "/times/rates", rate_time_id, error)
+     data_dims = n_reactions !We need to do this for HDF5 for integer type conversion
+     call h5screate_simple_f(1, data_dims, dspace_id, error)
+     call h5dcreate_f(rate_time_id, trim(dset_name), H5T_NATIVE_DOUBLE, &
+        dspace_id, dset_id, error)
+     call h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, &
+      reaction_r, data_dims, error)
+     call h5sclose_f(dspace_id, error)
+     call h5dclose_f(dset_id, error)
+     call h5gclose_f(rate_time_id, error)
+
      call h5gclose_f(grp_time_id, error)
      call h5fclose_f(file_id, error)
      call h5close_f(error)
@@ -116,7 +137,7 @@ contains
      character(len=*), intent(in) :: filename
      character(len=name_len), allocatable :: var_names(:)
      integer :: opVarNum
-     integer :: i, iter, f_unit
+     integer :: i, iter, f_unit, n
      character(len=string_len) :: varFname
 
      varFname = trim(filename) // "_var_names.txt"
@@ -136,6 +157,11 @@ contains
       write(f_unit, "(A)") trim(o_s%var_names(i))
      end do
      write(f_unit, "(A)")"-----------------------"
+      do n = 1, n_reactions
+        write(f_unit, "(I4,A,A)") n,":", reactions(n)%description
+      end do
+     write(f_unit, "(A)")"-----------------------"
+
      close(f_unit)
      
    

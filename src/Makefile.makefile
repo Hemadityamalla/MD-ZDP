@@ -29,7 +29,7 @@ all: $(TARGET)
 .PHONY: all clean 
 
 clean:
-	rm -f $(OBJ) *.mod $(TARGET) *.o gmon.out *.h5 *_var_names.txt
+	rm -f $(OBJ) *.mod $(TARGET) *.o gmon.out *.h5 *_var_names.txt ../$(TARGET)
 
 # Dependencies
 $(TARGET): $(OBJ)

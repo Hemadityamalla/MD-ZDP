@@ -16,7 +16,7 @@ module m_types
   integer, parameter :: comp_len = 20
 
   !> Maximum size of the ODE system
-  integer, parameter :: max_var_lim = 100
+  integer, parameter :: max_var_lim = 500
 
   !> Double precision kind
   integer, parameter :: dp = kind(0.0d0)

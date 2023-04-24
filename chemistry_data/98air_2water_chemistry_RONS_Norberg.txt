@@ -142,7 +142,7 @@ O- + O2_a -> O2 + e,constant,3.0e-16
 #PATH TO H2O2
 #e + H2O -> H + OH + e,field_table, <TODO>
 #e + H2O -> e + e + H+ + OH,field_table,C69 H2O Ionization 16.90 eV
-#e + H2O+ -> H + OH,rate_analytic_<TODO>,6.6e-12 -0.5 
+e + H2O+ -> H + OH,k1_func,3.8105e-13 -0.5 
 O2- + H2O+ -> O2 + OH + H,constant,1.0e-13
 OH + OH + O2 -> H2O2 + O2,k8_func,6.9e-43 0.8
 OH + OH + N2 -> H2O2 + N2,k8_func,6.9e-43 0.8

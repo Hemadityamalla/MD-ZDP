@@ -83,7 +83,7 @@ for i_specie in range(4,var_end):
 
 
 #Plotting the reaction rates
-reac_per_plot = 6
+reac_per_plot = 2
 n_reac_plots = int(len(reac_names)/reac_per_plot) + 1
 for i_reac in range(0, len(reac_names)):
     var_vals = np.array([x[i_reac] for x in rate_array])

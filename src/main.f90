@@ -38,8 +38,9 @@ program zeroDimPlasmaChem
     real(dp), parameter :: lorge_num = 1e100_dp
     real(dp) :: init_specie_density(2)
     integer :: test_iterator
-    integer :: output_number = 50
+    integer :: output_number = 1000
     real(dp), allocatable :: reaction_rates(:,:)
+    real(dp) :: efld_Td(n_cell)
     !character(len=string_len) :: output_name
 
     print *, "Inside main prog:"
@@ -67,10 +68,12 @@ program zeroDimPlasmaChem
     ! Setting the initial conditions
     !print *, "Initial densities: ", &
     !   odes%vars(species_itree(n_gas_species+1:n_species))
-    print *, "EFLD: ", odes%vars(i_e_fld)*1e21_dp/gas_number_density
+    efld_Td(n_cell) = SI_to_Townsend * odes%vars(i_e_fld)/gas_number_density   
+    print *, "EFLD: ", efld_Td
+    call get_rates(efld_Td,reaction_rates, n_cell)
+
     ! Time integration loop here
     do while (time < end_time)
-      !print *, "Error: ", exp(1.0e-16*2.4143212320551650E+25*time)-odes%vars(i_electron)
       ! Add functionality to compute the wall clock time 
       if (global_dt < dt_min) then
          print *, "dt(", global_dt, ") smaller than dt_min(", dt_min, ")"
@@ -81,6 +84,7 @@ program zeroDimPlasmaChem
       if (mod(test_iterator, output_number) == 0) then
          print *, "Time: ", time
          call output_HDF5_solution(odes, reaction_rates, trim(output_name), time, test_iterator)
+         call output_current(odes, trim(output_name), time)
       endif
       call get_field(odes%vars(i_e_fld), time, field_constant)
       call ode_advance(odes, global_dt, &
@@ -282,10 +286,10 @@ program zeroDimPlasmaChem
       real(dp), intent(inout) :: field_val 
       real(dp), intent(in) :: sim_time 
       logical, intent(in) :: constant
-      real(dp) :: trise = 3.0e-9
-      real(dp) :: tfall = 6.0e-9
-      real(dp) :: tinter = 100e-9
-      real(dp) :: tconst = 8e-9
+      real(dp) :: trise = 4.0e-8
+      real(dp) :: tfall = 4.0e-8
+      real(dp) :: tinter = 1e-6
+      real(dp) :: tconst = 2e-7
       real(dp) :: t_block, t_period, t 
       if (constant) then
          field_val = field_amplitude

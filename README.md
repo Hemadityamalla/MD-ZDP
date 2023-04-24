@@ -20,6 +20,7 @@
 - Add options to write out source/sink terms for the species
 - Output rate constants, etc
 - ADD UNIT AND REGRESSION TESTS
+- Think of just generating txt files because the hd5 files being generated are too large!
 
 
 ### Future work

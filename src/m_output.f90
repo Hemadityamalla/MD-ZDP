@@ -8,8 +8,12 @@ module m_output
 
   public :: output_initialize
   public :: output_HDF5_solution
+  public :: output_current
+  !public :: output_qtplaskin_solution
   private :: write_var_names
   private :: write_time_steps
+  !integer, private :: ifile_unit=5
+  !logical, private :: lstat_accum
 
 contains
 
@@ -129,6 +133,50 @@ contains
      !close(my_unit)
    end subroutine output_HDF5_solution
 
+   subroutine output_current(o_s, filename, time)
+     use m_chemistry
+     use m_types
+     use m_transport_data
+     use m_units_constants
+     use m_lookup_table
+     use m_gas
+     implicit none
+     type(ode_sys), intent(in) :: o_s
+     character(len=*), intent(in) :: filename
+     integer :: my_unit, iElec, iEfld
+     character(len=string_len) :: varFname
+     real(dp), intent(in) :: time
+     real(dp) :: current
+     character(len=50), save :: fmt, fmt_header
+     logical, save :: first_time = .true.
+     real(dp) :: Td, mob
+
+     varFname = trim(filename) // "_current_vs_time.txt"
+
+      if (first_time) then
+         first_time = .false.
+         open(newunit=my_unit, file=trim(varFname), action="write")
+         write(my_unit, "(A)", advance="no") "#time current"
+         write(my_unit, *) ""
+         close(my_unit)
+      end if
+
+
+      
+      iElec = find_ode_var(o_s, "e")
+      iEfld = find_ode_var(o_s, "electric_fld")
+      Td = o_s%vars(iEfld)*SI_to_Townsend/gas_number_density
+      mob = LT_get_col(td_tbl, td_mobility, Td)/gas_number_density
+      current = -(UC_elec_q_over_eps0)*mob*o_s%vars(iEfld)*o_s%vars(iElec)
+      fmt = "(E16.8, E16.8)"
+      open(newunit=my_unit, file=trim(varFname), action="write", &
+         position="append")
+      write(my_unit, fmt) time, current
+      close(my_unit)
+     
+   
+   end subroutine output_current
+
    subroutine write_var_names(o_s, filename)
      use m_chemistry
      use m_types
@@ -186,4 +234,5 @@ contains
    end subroutine write_time_steps
 
 
-end module m_output
+
+END MODULE M_OUTPUT
